@@ -242,4 +242,4 @@ Lynx est maintenant installé et prêt à analyser vos fichiers !
 3. **Configurez** vos patterns personnalisés
 4. **Partagez** vos retours d'expérience
 
-**Bonne analyse ! 🦁✨** 
+**Bonne analyse ! 🦊✨** 
