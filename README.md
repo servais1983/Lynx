@@ -1,3 +1,5 @@
+<img width="1024" height="1024" alt="image" src="lynx.png" />
+
 # 🦊 Lynx - ThreatHunter Pro
 
 **Outil de triage de fichiers avec IA et analyse avancée**
@@ -380,4 +382,4 @@ npm start
 # http://localhost:3786
 ```
 
-**Lynx est maintenant prêt à analyser vos fichiers ! 🦊✨** 
+**Lynx est maintenant prêt à analyser vos fichiers ! 🦊✨**
