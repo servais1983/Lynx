@@ -1,0 +1,46 @@
+Malicious Macro Sample - DEMONSTRATION ONLY
+
+Ce fichier contient des patterns spécifiques aux macros malveillantes pour tester Lynx.
+
+Patterns détectés :
+- AutoOpen
+- Auto_Open
+- Document_Open
+- AutoClose
+- Auto_Close
+- Document_Close
+- Workbook_Open
+- Worksheet_Activate
+
+Code de macro simulé :
+Sub AutoOpen()
+    ' Macro automatique au démarrage
+    MsgBox "AutoOpen macro executed"
+End Sub
+
+Sub Auto_Open()
+    ' Alternative Auto_Open
+    Application.Run "malicious_function"
+End Sub
+
+Sub Document_Open()
+    ' Macro au chargement du document
+    Call malicious_payload
+End Sub
+
+Sub AutoClose()
+    ' Macro à la fermeture
+    SaveDocument
+End Sub
+
+Sub Workbook_Open()
+    ' Macro Excel automatique
+    ExecuteMaliciousCode
+End Sub
+
+Sub Worksheet_Activate()
+    ' Macro d'activation de feuille
+    RunPayload
+End Sub
+
+Ce fichier devrait être détecté comme MEDIUM severity par Lynx. 

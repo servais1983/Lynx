@@ -1,0 +1,14 @@
+Ce fichier contient string1 et d'autres données normales.
+Il y a aussi string2 dans ce contenu.
+Ce fichier contient du code malicious et des patterns suspects.
+Contenu suspicious avec des éléments douteux.
+Script avec eval() et des fonctions suspectes.
+WannaCry ransomware patterns
+Zeus trojan detection
+Emotet malware
+GetAsyncKeyState keylogger
+meterpreter backdoor
+Invoke-Expression PowerShell
+eval( malicious JavaScript
+AutoOpen macro
+\x90\x90\x90 shellcode 

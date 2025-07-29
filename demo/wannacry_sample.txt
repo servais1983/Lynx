@@ -1,0 +1,45 @@
+# Fichier de démonstration - Simulation WannaCry Ransomware
+# Ce fichier contient des patterns similaires à WannaCry pour tester Lynx
+
+# Patterns WannaCry détectés :
+WNcry@2ol7
+WanaCrypt0r
+WannaCry
+WNCRY
+
+# Code de chiffrement suspect
+encryption_key = "WNcry@2ol7"
+ransom_note = "WanaCrypt0r 2.0"
+
+# Simulation de comportement malveillant
+def encrypt_files():
+    print("WNcry@2ol7 - Chiffrement en cours...")
+    print("WanaCrypt0r - Fichiers verrouillés")
+    return "WannaCry patterns detected"
+
+# Demande de rançon
+ransom_message = """
+WNCRY RANSOMWARE
+Vos fichiers ont été chiffrés avec WNcry@2ol7
+Payez 300$ en Bitcoin pour les récupérer
+WanaCrypt0r 2.0
+"""
+
+# Patterns de détection
+suspicious_patterns = [
+    "WNcry@2ol7",
+    "WanaCrypt0r", 
+    "WannaCry",
+    "WNCRY",
+    "ransomware",
+    "encrypt",
+    "bitcoin"
+]
+
+# Test de détection
+for pattern in suspicious_patterns:
+    if pattern in ransom_message:
+        print(f"Pattern WannaCry détecté : {pattern}")
+
+# Statut : THREAT - Score de risque élevé
+# Ce fichier simule un ransomware pour tester la détection 

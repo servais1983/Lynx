@@ -1,0 +1,28 @@
+# Fichier de contrôle - Document propre
+# Ce fichier ne contient aucun pattern suspect pour tester Lynx
+
+# Contenu normal et propre
+Ceci est un document de test pour Lynx.
+
+Contenu :
+- Aucun pattern suspect
+- Texte normal et propre
+- Pas de code malveillant
+- Pas de patterns de détection
+
+Informations :
+- Type : Document texte
+- Statut attendu : SAFE
+- Score de risque : 0-20%
+- Description : Fichier de contrôle propre
+
+Ce fichier sert de référence pour comparer avec les fichiers suspects.
+Il ne devrait pas déclencher d'alerte dans Lynx.
+
+Utilisation :
+- Test de contrôle
+- Comparaison avec fichiers suspects
+- Validation du système de détection
+- Démonstration des capacités de Lynx
+
+Fin du document de test. 

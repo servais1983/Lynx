@@ -1,0 +1,27 @@
+Backdoor Sample - DEMONSTRATION ONLY
+
+Ce fichier contient des patterns spécifiques aux backdoors pour tester Lynx.
+
+Patterns détectés :
+- meterpreter
+- Meterpreter
+- METERPRETER
+- reverse shell
+- Reverse Shell
+- REVERSE SHELL
+- bind shell
+- Bind Shell
+- BIND SHELL
+
+Code malveillant simulé :
+meterpreter session establishment
+Meterpreter payload execution
+METERPRETER command execution
+reverse shell connection
+Reverse Shell backdoor
+REVERSE SHELL communication
+bind shell listener
+Bind Shell server
+BIND SHELL port binding
+
+Ce fichier devrait être détecté comme HIGH severity par Lynx. 

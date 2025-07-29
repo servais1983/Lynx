@@ -1,0 +1,26 @@
+{
+  "name": "lynx",
+  "version": "1.0.0",
+  "description": "Lynx - Outil de triage de fichiers avec IA et analyse avancée",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 3786",
+    "dev": "python -m http.server 3786",
+    "build": "echo 'Build completed'",
+    "test": "echo 'Tests completed'"
+  },
+  "keywords": [
+    "security",
+    "malware",
+    "analysis",
+    "ai",
+    "machine-learning",
+    "yara",
+    "virustotal",
+    "threat-hunting"
+  ],
+  "author": "Lynx Team",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {}
+} 

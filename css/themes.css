@@ -1,0 +1,468 @@
+/* Thèmes et Notifications pour Lynx */
+
+/* Variables CSS pour les thèmes */
+:root {
+    /* Thème Glassmorphic par défaut */
+    --bg-primary: rgba(255, 255, 255, 0.1);
+    --bg-secondary: rgba(255, 255, 255, 0.05);
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --accent-color: #2196F3;
+    --border-color: rgba(255, 255, 255, 0.2);
+    --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --backdrop: blur(10px);
+}
+
+/* Mode sombre */
+.dark-mode {
+    --bg-primary: rgba(0, 0, 0, 0.8);
+    --bg-secondary: rgba(0, 0, 0, 0.6);
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* Mode clair */
+.light-mode {
+    --bg-primary: rgba(255, 255, 255, 0.9);
+    --bg-secondary: rgba(255, 255, 255, 0.7);
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --border-color: rgba(0, 0, 0, 0.1);
+    --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Thème Material Design */
+.theme-material {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --text-primary: #212121;
+    --text-secondary: #757575;
+    --accent-color: #6200ee;
+    --border-color: #e0e0e0;
+    --shadow: 0 2px 4px rgba(0,0,0,0.1);
+    --backdrop: none;
+}
+
+/* Thème Neumorphic */
+.theme-neumorphic {
+    --bg-primary: #e0e5ec;
+    --bg-secondary: #f0f3f6;
+    --text-primary: #2d3748;
+    --text-secondary: #4a5568;
+    --accent-color: #3182ce;
+    --border-color: #cbd5e0;
+    --shadow: 8px 8px 16px #a3b1c6, -8px -8px 16px #ffffff;
+    --backdrop: none;
+}
+
+/* Thème Cyberpunk */
+.theme-cyberpunk {
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #1a1a1a;
+    --text-primary: #00ff41;
+    --text-secondary: #00cc33;
+    --accent-color: #ff0080;
+    --border-color: #00ff41;
+    --shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+    --backdrop: blur(5px);
+}
+
+/* Application des variables CSS */
+body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+}
+
+.card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
+    backdrop-filter: var(--backdrop);
+}
+
+/* Notifications */
+#notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    max-width: 400px;
+}
+
+.custom-notification {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+    backdrop-filter: var(--backdrop);
+    transform: translateX(100%);
+    opacity: 0;
+    transition: all 0.3s ease;
+    max-width: 400px;
+}
+
+.custom-notification.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.custom-notification.info {
+    border-left: 4px solid #2196F3;
+}
+
+.custom-notification.success {
+    border-left: 4px solid #4CAF50;
+}
+
+.custom-notification.warning {
+    border-left: 4px solid #FF9800;
+}
+
+.custom-notification.error {
+    border-left: 4px solid #F44336;
+}
+
+.notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.notification-title {
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+}
+
+.notification-close:hover {
+    background-color: var(--border-color);
+}
+
+.notification-body {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* Sélecteur de thème */
+.theme-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.theme-selector label {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.theme-selector select {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 14px;
+}
+
+/* Panneau de contrôle UI */
+.ui-control-panel {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: var(--shadow);
+    backdrop-filter: var(--backdrop);
+}
+
+.ui-control-panel h3 {
+    color: var(--text-primary);
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.control-group {
+    margin-bottom: 15px;
+}
+
+.control-group label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.control-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent-color);
+}
+
+.control-group button {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.control-group button:hover {
+    background: var(--accent-color);
+    opacity: 0.8;
+    transform: translateY(-1px);
+}
+
+/* Indicateurs de thème et mode sombre */
+#theme-indicator,
+#dark-mode-indicator {
+    display: inline-block;
+    padding: 5px 10px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+/* Animations pour les thèmes */
+.theme-transition {
+    transition: all 0.3s ease;
+}
+
+/* Styles spécifiques pour chaque thème */
+.theme-glassmorphic .card {
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.theme-material .card {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.theme-neumorphic .card {
+    border-radius: 15px;
+    box-shadow: 8px 8px 16px #a3b1c6, -8px -8px 16px #ffffff;
+}
+
+.theme-cyberpunk .card {
+    border: 1px solid #00ff41;
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+}
+
+/* Responsive design pour les notifications */
+@media (max-width: 768px) {
+    #notification-container {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+    
+    .custom-notification {
+        max-width: none;
+        margin-bottom: 8px;
+    }
+    
+    .ui-control-panel {
+        margin: 10px 0;
+        padding: 15px;
+    }
+}
+
+/* Animations d'entrée pour les notifications */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+.custom-notification.show {
+    animation: slideInRight 0.3s ease;
+}
+
+.custom-notification.hide {
+    animation: slideOutRight 0.3s ease;
+}
+
+/* Styles pour les raccourcis clavier */
+.keyboard-shortcut {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: monospace;
+}
+
+/* Indicateur de mode sombre automatique */
+.auto-dark-mode-indicator {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.auto-dark-mode-indicator:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow);
+}
+
+/* Styles pour les thèmes de couleurs personnalisées */
+.theme-custom {
+    /* Les variables seront définies dynamiquement via JavaScript */
+}
+
+/* Transitions fluides pour tous les éléments */
+* {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Styles pour les modales avec thèmes */
+.modal {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: var(--backdrop);
+}
+
+.modal-content {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    box-shadow: var(--shadow);
+    backdrop-filter: var(--backdrop);
+}
+
+/* Styles pour les boutons avec thèmes */
+.btn {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.btn:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+    background: var(--border-color);
+}
+
+/* Styles pour les inputs avec thèmes */
+input, textarea, select {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 14px;
+}
+
+input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+/* Styles pour les tableaux avec thèmes */
+table {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+th, td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+th {
+    background: var(--bg-primary);
+    font-weight: 600;
+}
+
+/* Styles pour les barres de progression avec thèmes */
+.progress-bar {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    background: var(--accent-color);
+    height: 100%;
+    transition: width 0.3s ease;
+} 

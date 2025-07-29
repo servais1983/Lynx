@@ -1,0 +1,19 @@
+Zeus Trojan Sample - DEMONSTRATION ONLY
+
+Ce fichier contient des patterns spécifiques au trojan Zeus pour tester Lynx.
+
+Patterns détectés :
+- Zeus
+- Zbot
+- Gameover
+- Citadel
+- KINS
+
+Code malveillant simulé :
+Zeus trojan configuration
+Zbot banking malware
+Gameover Zeus variant
+Citadel trojan code
+KINS malware family
+
+Ce fichier devrait être détecté comme HIGH severity par Lynx. 

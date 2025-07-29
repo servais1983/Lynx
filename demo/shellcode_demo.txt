@@ -1,0 +1,20 @@
+Shellcode Sample - DEMONSTRATION ONLY
+
+Ce fichier contient des patterns spécifiques aux shellcodes pour tester Lynx.
+
+Patterns détectés :
+- \x90\x90\x90 (NOP sled)
+- \xcc\xcc\xcc (INT3 breakpoints)
+- \x00\x00\x00 (Null bytes)
+
+Code malveillant simulé :
+\x90\x90\x90\x90\x90\x90\x90\x90 NOP sled
+\xcc\xcc\xcc\xcc\xcc\xcc\xcc\xcc INT3 breakpoints
+\x00\x00\x00\x00\x00\x00\x00\x00 Null bytes
+
+Shellcode patterns :
+\x90\x90\x90 NOP instruction
+\xcc\xcc\xcc Debug breakpoint
+\x00\x00\x00 Null terminator
+
+Ce fichier devrait être détecté comme HIGH severity par Lynx. 

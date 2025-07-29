@@ -1,0 +1,21 @@
+Keylogger Sample - DEMONSTRATION ONLY
+
+Ce fichier contient des patterns spécifiques aux keyloggers pour tester Lynx.
+
+Patterns détectés :
+- GetAsyncKeyState
+- SetWindowsHookEx
+- WH_KEYBOARD_LL
+- keylogger
+- KeyLogger
+- KEYLOGGER
+
+Code de surveillance simulé :
+GetAsyncKeyState(0x01); // Check left mouse button
+SetWindowsHookEx(WH_KEYBOARD_LL, hookProc, NULL, 0);
+WH_KEYBOARD_LL hook installation
+keylogger surveillance code
+KeyLogger data collection
+KEYLOGGER monitoring routine
+
+Ce fichier devrait être détecté comme HIGH severity par Lynx. 

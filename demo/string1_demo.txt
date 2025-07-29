@@ -1,0 +1,11 @@
+Ceci est un fichier de démonstration pour Lynx.
+
+Ce fichier contient le pattern "string1" pour tester la détection.
+
+Contenu du fichier :
+- Pattern recherché : string1
+- Type : Fichier texte
+- Statut attendu : SUSPICIOUS
+- Score de risque : 60-80%
+
+Ce fichier est utilisé pour démontrer les capacités de détection de patterns de Lynx. 
