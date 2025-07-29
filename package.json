@@ -2,12 +2,18 @@
   "name": "lynx",
   "version": "1.0.0",
   "description": "Lynx - Outil de triage de fichiers avec IA et analyse avancée",
+  "type": "module",
   "main": "index.html",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "start": "python -m http.server 3786",
-    "dev": "python -m http.server 3786",
-    "build": "echo 'Build completed'",
-    "test": "echo 'Tests completed'"
+    "test": "echo 'Tests completed'",
+    "lint": "eslint js/**/*.js",
+    "format": "prettier --write js/**/*.js css/**/*.css",
+    "security-check": "npm audit",
+    "analyze": "vite-bundle-analyzer"
   },
   "keywords": [
     "security",
@@ -21,6 +27,20 @@
   ],
   "author": "Lynx Team",
   "license": "MIT",
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+    "three": "^0.158.0",
+    "@tensorflow/tfjs": "^4.11.0",
+    "crypto-js": "^4.2.0",
+    "jszip": "^3.10.1",
+    "chart.js": "^4.4.0",
+    "file-saver": "^2.0.5"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "eslint": "^8.55.0",
+    "prettier": "^3.1.0",
+    "terser": "^5.24.0",
+    "vite-plugin-compression": "^0.5.1",
+    "vite-plugin-pwa": "^0.17.4"
+  }
 } 
