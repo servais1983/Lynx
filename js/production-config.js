@@ -4,7 +4,7 @@
 const PRODUCTION_CONFIG = {
     // Configuration VirusTotal
     VIRUSTOTAL: {
-        API_KEY: '3136c308ce9db10a8dadb4f42c4032009b031598fe5706d2c0337ddf8c8acb8d',
+        API_KEY: '', // L'utilisateur doit fournir sa propre clé API via l'interface
         RATE_LIMIT: 4, // Requêtes par minute (gratuit)
         TIMEOUT: 30000, // 30 secondes
         RETRY_ATTEMPTS: 3,

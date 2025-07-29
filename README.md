@@ -35,6 +35,15 @@ Lynx est un outil de triage de fichiers ultra-moderne qui combine l'intelligence
 
 ## 🚀 Fonctionnalités
 
+### 🔐 Sécurité Renforcée (Nouveau)
+- **Gestion sécurisée des clés API** : Chiffrement AES-256-GCM des clés API
+- **Interface de gestion des clés** : Ajout/modification des clés API via l'interface
+- **Validation avancée des fichiers** : Analyse par magic numbers et signatures
+- **Système de build moderne** : Optimisation et minification automatique
+- **Configuration unifiée** : Centralisation de toutes les configurations
+
+### 🔍 Analyse Avancée
+
 ### 🔍 Analyse Avancée
 - **VirusTotal Integration** : Analyse en temps réel avec l'API VirusTotal
 - **YARA Rules** : Règles de détection personnalisables et étendues
@@ -93,12 +102,18 @@ cd Lynx
 npm install
 ```
 
-3. **Lancer Lynx**
+3. **Lancer Lynx en mode développement**
 ```bash
-npm start
+npm run dev
 ```
 
-4. **Ouvrir dans le navigateur**
+4. **Ou construire pour la production**
+```bash
+npm run build
+npm run preview
+```
+
+5. **Ouvrir dans le navigateur**
 ```
 http://localhost:3786
 ```
@@ -154,6 +169,19 @@ Puis ouvrez `http://localhost:3786` dans votre navigateur.
    - Cliquez sur "📋 Rapport" pour les détails
    - Analysez les statistiques complètes
 
+### 🔑 Gestion des clés API (Nouveau)
+
+#### Ajouter une clé API VirusTotal
+1. Cliquez sur le bouton "🔑 Gérer les Clés API" dans l'interface
+2. Entrez votre clé API VirusTotal dans le champ correspondant
+3. Cliquez sur "Sauvegarder"
+4. La clé sera chiffrée et stockée localement
+
+#### Vérifier les clés API
+- Consultez l'état de vos clés API dans le gestionnaire
+- Les clés sont chiffrées avec AES-256-GCM
+- Aucune clé n'est stockée en clair
+
 ### 🎨 Gestion des patterns
 
 #### Ajouter un pattern personnalisé
@@ -180,11 +208,17 @@ Puis ouvrez `http://localhost:3786` dans votre navigateur.
 
 ### Configuration VirusTotal
 
-Pour utiliser l'API VirusTotal, ajoutez votre clé API dans `js/config.js` :
+**⚠️ IMPORTANT : Vous devez fournir votre propre clé API VirusTotal**
 
-```javascript
-VIRUSTOTAL_API_KEY: 'votre_clé_api_ici'
-```
+Pour utiliser l'API VirusTotal, vous devez :
+
+1. **Obtenir une clé API gratuite** sur [VirusTotal](https://www.virustotal.com/gui/join-us)
+2. **Ajouter votre clé API** via l'interface Lynx :
+   - Cliquez sur le bouton "🔑 Gérer les Clés API" dans l'interface
+   - Entrez votre clé API VirusTotal
+   - La clé sera chiffrée et stockée localement
+
+**Note de sécurité** : Aucune clé API n'est incluse dans ce repository pour des raisons de sécurité. Chaque utilisateur doit fournir sa propre clé.
 
 ### Configuration YARA
 

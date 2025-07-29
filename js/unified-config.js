@@ -183,7 +183,7 @@ class UnifiedConfig {
         }
         
         // Clé par défaut (à remplacer par une vraie clé)
-        const defaultKey = '3136c308ce9db10a8dadb4f42c4032009b031598fe5706d2c0337ddf8c8acb8d';
+        const defaultKey = ''; // L'utilisateur doit fournir sa propre clé API via l'interface
         localStorage.setItem('virustotal_api_key', defaultKey);
         return defaultKey;
     }

@@ -197,7 +197,7 @@ class VirusTotalAPI {
 }
 
 // Instance globale de l'API VirusTotal
-const vtAPI = new VirusTotalAPI('3136c308ce9db10a8dadb4f42c4032009b031598fe5706d2c0337ddf8c8acb8d');
+const vtAPI = new VirusTotalAPI(''); // L'utilisateur doit fournir sa propre clé API via l'interface
 
 // Export pour utilisation dans d'autres modules
 if (typeof module !== 'undefined' && module.exports) {
