@@ -45,8 +45,6 @@ Lynx est un outil de triage de fichiers ultra-moderne qui combine l'intelligence
 - **Configuration unifiée** : Centralisation de toutes les configurations
 
 ### 🔍 Analyse Avancée
-
-### 🔍 Analyse Avancée
 - **VirusTotal Integration** : Analyse en temps réel avec l'API VirusTotal
 - **YARA Rules** : Règles de détection personnalisables et étendues
 - **Signature Database** : Base de signatures locale pour la détection
