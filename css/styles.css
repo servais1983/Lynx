@@ -430,6 +430,84 @@ header p {
     z-index: 1000;
 }
 
+/* ── Panel / section card ───────────────────── */
+.panel {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 15px;
+    padding: 25px;
+    color: white;
+}
+
+.panel h2 {
+    font-size: 1.4rem;
+    margin-bottom: 15px;
+    color: white;
+}
+
+.panel h3 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+    color: rgba(255,255,255,0.9);
+}
+
+/* ── AI insights panel ───────────────────────── */
+.ai-insights-panel {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 15px;
+    padding: 20px;
+    color: white;
+    font-size: 14px;
+    line-height: 1.7;
+    min-height: 60px;
+}
+
+/* ── File list ───────────────────────────────── */
+.file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(5px);
+    border-radius: 10px;
+    border-left: 4px solid #4CAF50;
+    color: white;
+    transition: background 0.2s;
+}
+
+.file-item:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.file-item.safe    { border-left-color: #4CAF50; }
+.file-item.suspicious { border-left-color: #ff9800; }
+.file-item.threat  { border-left-color: #f44336; }
+.file-item.error   { border-left-color: #9e9e9e; }
+
+.chart-container {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 15px;
+    padding: 20px;
+    min-height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 @media (max-width: 768px) {
     .main-content {
         grid-template-columns: 1fr;
