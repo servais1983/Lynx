@@ -8,6 +8,8 @@ function _escHtml(str) {
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
         .replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
 }
+
+class SecureAPIManager {
     constructor() {
         this.apiKeys = new Map();
         this.rateLimiters = new Map();
