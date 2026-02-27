@@ -1,107 +1,88 @@
-// Règles YARA simulées pour Lynx
-// Ces règles simulent la détection de patterns malveillants
+// Lynx - YARA-compatible pattern matching engine
+// Scans actual file content (text + binary) against rule pattern sets
 
 const YARA_RULES = {
-    // Règles pour les exécutables malveillants
     malicious_executable: {
-        name: "Malicious Executable",
-        patterns: [
-            "MZ",
-            "PE",
-            "CreateRemoteThread",
-            "VirtualAllocEx",
-            "WriteProcessMemory"
-        ],
-        description: "Détecte les exécutables avec des patterns suspects"
+        name: 'Malicious Executable',
+        patterns: ['CreateRemoteThread','VirtualAllocEx','WriteProcessMemory','NtWriteVirtualMemory','RtlCreateUserThread'],
+        description: 'Process injection API calls detected'
     },
-
-    // Règles pour les scripts malveillants
+    evasion: {
+        name: 'Anti-Analysis / Evasion',
+        patterns: ['IsDebuggerPresent','CheckRemoteDebuggerPresent','NtQueryInformationProcess','SetUnhandledExceptionFilter','OutputDebugString'],
+        description: 'Anti-debug or anti-analysis techniques'
+    },
+    persistence: {
+        name: 'Persistence Mechanism',
+        patterns: ['RegCreateKey','RegSetValueEx','HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Run','schtasks /create','sc create','HKLM','RunOnce'],
+        description: 'Registry or scheduled task persistence'
+    },
     malicious_script: {
-        name: "Malicious Script",
-        patterns: [
-            "eval(",
-            "document.write",
-            "window.location",
-            "setTimeout",
-            "setInterval"
-        ],
-        description: "Détecte les scripts avec des fonctions dangereuses"
+        name: 'Malicious Script',
+        patterns: ['eval(base64_decode','FromBase64String','IEX(','Invoke-Expression','WScript.Shell','ActiveXObject','Shell.Application'],
+        description: 'Script execution or obfuscation patterns'
     },
-
-    // Règles pour les documents malveillants
     malicious_document: {
-        name: "Malicious Document",
-        patterns: [
-            "VBA",
-            "macro",
-            "AutoOpen",
-            "Document_Open",
-            "Shell"
-        ],
-        description: "Détecte les documents avec des macros suspectes"
+        name: 'Malicious Document Macro',
+        patterns: ['AutoOpen','Document_Open','AutoExec','VBA','CreateObject','WScript.Shell','Shell(','Chr('],
+        description: 'Office macro or embedded command execution'
     },
-
-    // Règles pour les ransomwares
     ransomware: {
-        name: "Ransomware Pattern",
-        patterns: [
-            "encrypt",
-            "decrypt",
-            "ransom",
-            "bitcoin",
-            "wallet"
-        ],
-        description: "Détecte les patterns typiques des ransomwares"
+        name: 'Ransomware Pattern',
+        patterns: ['your files have been encrypted','send bitcoin','pay the ransom','ransom note','WNcry@2ol7','WannaCry','NotPetya','your personal files are encrypted'],
+        description: 'Ransom demand or known ransomware strings'
     },
-
-    // Règles pour les keyloggers
     keylogger: {
-        name: "Keylogger Pattern",
-        patterns: [
-            "GetAsyncKeyState",
-            "SetWindowsHookEx",
-            "WH_KEYBOARD",
-            "keyboard",
-            "keystroke"
-        ],
-        description: "Détecte les patterns de keyloggers"
+        name: 'Keylogger Pattern',
+        patterns: ['GetAsyncKeyState','SetWindowsHookEx','WH_KEYBOARD_LL','WH_KEYBOARD','keybd_event','MapVirtualKey'],
+        description: 'Keyboard hook or keylogging API calls'
     },
-
-    // Règles pour les backdoors
     backdoor: {
-        name: "Backdoor Pattern",
-        patterns: [
-            "bind(",
-            "listen(",
-            "accept(",
-            "connect(",
-            "socket"
-        ],
-        description: "Détecte les patterns de backdoors réseau"
+        name: 'Backdoor / RAT Pattern',
+        patterns: ['meterpreter','reverse shell','bind shell','cmd.exe /c','nc -e','ncat','netcat','/bin/sh -i'],
+        description: 'Remote shell or RAT command channel'
+    },
+    network_c2: {
+        name: 'Network C2 Activity',
+        patterns: ['URLDownloadToFile','WinHttpOpen','InternetOpen','HttpSendRequest','socket(AF_INET','connect(sock','send(sock'],
+        description: 'Suspicious network communication patterns'
+    },
+    credential_theft: {
+        name: 'Credential Theft',
+        patterns: ['lsass','mimikatz','sekurlsa','logonpasswords','pass-the-hash','kerberos','dcsync'],
+        description: 'Credential dumping or lateral movement patterns'
     }
 };
 
-// Fonction pour analyser un fichier avec les règles YARA
-function analyzeWithYARA(file) {
-    const results = [];
-    const fileContent = file.name.toLowerCase() + file.type.toLowerCase();
-    
-    Object.entries(YARA_RULES).forEach(([ruleId, rule]) => {
-        const matches = rule.patterns.filter(pattern => 
-            fileContent.includes(pattern.toLowerCase())
-        );
-        
-        if (matches.length > 0) {
-            results.push({
-                rule: rule.name,
-                description: rule.description,
-                matches: matches,
-                severity: calculateSeverity(matches.length, rule.patterns.length)
-            });
-        }
+/**
+ * Asynchronously scan file content against all YARA rule pattern sets.
+ * Returns an array of match objects with rule name, severity, and matched patterns.
+ */
+async function analyzeWithYARA(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const bytes   = new Uint8Array(e.target.result);
+            const content = new TextDecoder('utf-8', { fatal: false }).decode(bytes).toLowerCase();
+            const results = [];
+
+            for (const [ruleId, rule] of Object.entries(YARA_RULES)) {
+                const matches = rule.patterns.filter(p => content.includes(p.toLowerCase()));
+                if (matches.length > 0) {
+                    results.push({
+                        rule:        rule.name,
+                        description: rule.description,
+                        matches,
+                        severity:    calculateSeverity(matches.length, rule.patterns.length)
+                    });
+                }
+            }
+
+            resolve(results);
+        };
+        reader.onerror = () => resolve([]);
+        reader.readAsArrayBuffer(file);
     });
-    
-    return results;
 }
 
 // Fonction pour calculer la sévérité basée sur le nombre de patterns trouvés

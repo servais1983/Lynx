@@ -1,7 +1,13 @@
 // Gestionnaire d'API sécurisé pour Lynx
 // Gère les clés d'API de manière sécurisée
 
-class SecureAPIManager {
+// Local escape helper — prevents XSS when inserting user-supplied values into HTML
+function _escHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
+}
     constructor() {
         this.apiKeys = new Map();
         this.rateLimiters = new Map();
@@ -16,11 +22,19 @@ class SecureAPIManager {
         this.setupSecurityHeaders();
     }
 
-    // Génération d'une clé de chiffrement
+    // Generates a stable master key: reuses the one stored in localStorage,
+    // or creates a new random key on first run and persists it.
     generateEncryptionKey() {
+        const STORAGE_KEY = 'lynx_master_key';
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored && stored.length === 64) {
+            return stored; // Reuse existing key
+        }
         const array = new Uint8Array(32);
         crypto.getRandomValues(array);
-        return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+        const key = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+        localStorage.setItem(STORAGE_KEY, key);
+        return key;
     }
 
     // Chargement des clés stockées de manière sécurisée
@@ -73,12 +87,12 @@ class SecureAPIManager {
                 ['deriveBits', 'deriveKey']
             );
             
-            // Dérivation de la clé
+            // Derivation of the wrapping key
             const key = await crypto.subtle.deriveKey(
                 {
                     name: 'PBKDF2',
-                    salt: encoder.encode('lynx-salt'),
-                    iterations: 100000,
+                    salt: encoder.encode('lynx-' + this.encryptionKey.slice(0, 16)),
+                    iterations: 210000,
                     hash: 'SHA-256'
                 },
                 keyMaterial,
@@ -126,12 +140,12 @@ class SecureAPIManager {
                 ['deriveBits', 'deriveKey']
             );
             
-            // Dérivation de la clé
+            // Derivation of the unwrapping key
             const key = await crypto.subtle.deriveKey(
                 {
                     name: 'PBKDF2',
-                    salt: encoder.encode('lynx-salt'),
-                    iterations: 100000,
+                    salt: encoder.encode('lynx-' + this.encryptionKey.slice(0, 16)),
+                    iterations: 210000,
                     hash: 'SHA-256'
                 },
                 keyMaterial,
@@ -335,39 +349,55 @@ class SecureAPIManager {
 
     // Interface utilisateur pour la gestion des clés
     showAPIKeyManager() {
+        const existing = document.getElementById('api-key-modal');
+        if (existing) existing.remove();
+
         const modal = document.createElement('div');
+        modal.id = 'api-key-modal';
         modal.className = 'api-key-modal';
         modal.innerHTML = `
             <div class="modal-content">
-                <h3>🔑 Gestion des Clés API</h3>
-                <div class="api-keys-list">
+                <h3>API Key Management</h3>
+                <div class="api-keys-list" id="api-keys-list">
                     ${this.generateAPIKeysList()}
                 </div>
                 <div class="add-key-form">
-                    <h4>Ajouter une nouvelle clé</h4>
+                    <h4>Add a new key</h4>
                     <select id="serviceSelect">
                         <option value="virustotal">VirusTotal</option>
-                        <option value="custom">API Personnalisée</option>
+                        <option value="custom">Custom API</option>
                     </select>
-                    <input type="password" id="apiKeyInput" placeholder="Clé API">
-                    <button onclick="secureAPIManager.addKeyFromUI()">Ajouter</button>
+                    <input type="password" id="apiKeyInput" placeholder="API Key" autocomplete="off">
+                    <button id="addApiKeyBtn">Add</button>
                 </div>
-                <button onclick="this.parentElement.parentElement.remove()">Fermer</button>
+                <button id="closeApiKeyModal">Close</button>
             </div>
         `;
-        
         document.body.appendChild(modal);
+
+        // Use event delegation — never use inline onclick with data from the key map
+        modal.querySelector('#addApiKeyBtn').addEventListener('click', () => this.addKeyFromUI());
+        modal.querySelector('#closeApiKeyModal').addEventListener('click', () => modal.remove());
+        modal.querySelector('#api-keys-list').addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-api-key-btn')) {
+                const service = e.target.closest('[data-service]').getAttribute('data-service');
+                if (service) this.removeAPIKey(service).then(() => this.showAPIKeyManager());
+            }
+        });
     }
 
     // Génération de la liste des clés
     generateAPIKeysList() {
+        if (this.apiKeys.size === 0) {
+            return '<p style="color:#666;">No API keys configured.</p>';
+        }
         let html = '';
         for (const [service, key] of this.apiKeys.entries()) {
             html += `
-                <div class="api-key-item">
-                    <span class="service-name">${service}</span>
-                    <span class="key-preview">${key.substring(0, 8)}...</span>
-                    <button onclick="secureAPIManager.removeAPIKey('${service}')">Supprimer</button>
+                <div class="api-key-item" data-service="${_escHtml(service)}">
+                    <span class="service-name">${_escHtml(service)}</span>
+                    <span class="key-preview">${_escHtml(key.substring(0, 8))}&hellip;</span>
+                    <button class="remove-api-key-btn">Remove</button>
                 </div>
             `;
         }

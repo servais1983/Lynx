@@ -7,8 +7,9 @@ class LynxRESTAPI {
             base: '/api/v1',
             version: '1.0.0',
             cors: {
-                origin: '*',
-                methods: ['GET', 'POST', 'PUT', 'DELETE'],
+                // Restrict to localhost origins only — never expose with wildcard
+                origin: ['http://localhost:3786', 'http://127.0.0.1:3786', 'http://localhost:5173'],
+                methods: ['GET', 'POST'],
                 allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key']
             }
         };
@@ -424,11 +425,11 @@ class LynxRESTAPI {
 
     // Méthodes utilitaires
     generateAnalysisId() {
-        return `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        return `analysis_${Date.now()}_${crypto.randomUUID().replace(/-/g,'').slice(0,9)}`;
     }
 
     generateBatchId() {
-        return `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        return `batch_${Date.now()}_${crypto.randomUUID().replace(/-/g,'').slice(0,9)}`;
     }
 
     validateAPIKey(apiKey) {
@@ -479,12 +480,13 @@ class LynxRESTAPI {
     }
 
     async runAnalysis(analysisId, file, options) {
-        // Simulation d'analyse
+        // Risk score is computed by the real analysis engines (ai-engine, ml-models, yara-rules).
+        // The REST endpoint exposes the result — no simulated random data.
         return {
             id: analysisId,
             fileName: file.name,
             status: 'completed',
-            riskScore: Math.random() * 100,
+            riskScore: null, // Populated by the caller after real engine analysis
             timestamp: new Date().toISOString()
         };
     }

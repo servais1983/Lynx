@@ -561,11 +561,11 @@ function chunkArray(array, chunkSize) {
 
 // Générer des IDs uniques
 function generateAnalysisId() {
-    return `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `analysis_${Date.now()}_${crypto.randomUUID().replace(/-/g,'').slice(0,9)}`;
 }
 
 function generateBatchId() {
-    return `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `batch_${Date.now()}_${crypto.randomUUID().replace(/-/g,'').slice(0,9)}`;
 }
 
 // Envoyer le statut du worker
@@ -602,20 +602,25 @@ function cleanup() {
     });
 }
 
-// Charger les modèles IA (simulation)
+// Charger les modèles IA — scoring déterministe basé sur les features
 async function loadAIModels() {
+    const featureScore = (features) => {
+        if (!Array.isArray(features) || features.length === 0) return 0;
+        const sum = features.reduce((a, b) => a + Math.abs(b || 0), 0);
+        return Math.min(100, (sum / features.length) * 100);
+    };
     return {
         malware: {
-            predict: (features) => ({
-                prediction: Math.random() > 0.7 ? 'malicious' : 'benign',
-                confidence: Math.random() * 0.3 + 0.7
-            })
+            predict: (features) => {
+                const score = featureScore(features);
+                return { prediction: score > 60 ? 'malicious' : 'benign', confidence: Math.min(0.97, 0.50 + score / 200) };
+            }
         },
         ransomware: {
-            predict: (features) => ({
-                prediction: Math.random() > 0.8 ? 'ransomware' : 'benign',
-                confidence: Math.random() * 0.2 + 0.8
-            })
+            predict: (features) => {
+                const score = featureScore(features);
+                return { prediction: score > 70 ? 'ransomware' : 'benign', confidence: Math.min(0.97, 0.55 + score / 200) };
+            }
         }
     };
 }

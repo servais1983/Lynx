@@ -1,425 +1,233 @@
-// Moteur d'IA sécurisé pour Lynx - DevSecOps
-// Utilise TensorFlow.js et Phi-3 pour l'analyse de sécurité
+﻿// Lynx - AI Engine powered by Transformers.js (Hugging Face)
+// Uses real in-browser inference via ONNX Runtime Web
+// Model: Xenova/nli-deberta-v3-small  (zero-shot classification)
+// CDN:   https://cdn.jsdelivr.net/npm/@xenova/transformers@2
+
+/**
+ * Lazy-load the Transformers.js pipeline.
+ * Uses a module-level singleton so the model is only downloaded once.
+ */
+
+let _pipelinePromise = null;
+
+async function getClassifier() {
+    if (_pipelinePromise) return _pipelinePromise;
+
+    const { pipeline } = await import(
+        'https://cdn.jsdelivr.net/npm/@xenova/transformers@2/dist/transformers.min.js'
+    );
+
+    _pipelinePromise = pipeline(
+        'zero-shot-classification',
+        'Xenova/nli-deberta-v3-small',
+        { quantized: true }
+    );
+
+    return _pipelinePromise;
+}
+
+const THREAT_LABELS = ['malware','ransomware','trojan','backdoor','keylogger','benign'];
+
+// ── Heuristic helpers (deterministic, no Math.random) ────────────────────────
+
+function shannonEntropy(bytes) {
+    if (!bytes || bytes.length === 0) return 0;
+    const freq = new Uint32Array(256);
+    for (const b of bytes) freq[b]++;
+    let h = 0;
+    const n = bytes.length;
+    for (const c of freq) {
+        if (c > 0) { const p = c / n; h -= p * Math.log2(p); }
+    }
+    return h;
+}
+
+const INJECTION_APIS   = ['CreateRemoteThread','VirtualAllocEx','WriteProcessMemory','NtWriteVirtualMemory'];
+const EVASION_APIS     = ['IsDebuggerPresent','CheckRemoteDebuggerPresent','NtQueryInformationProcess'];
+const PERSISTENCE_APIS = ['RegCreateKey','RegSetValueEx','schtasks','sc create','HKLM','HKCU'];
+const NETWORK_APIS     = ['WSAStartup','socket','connect','WinHttpOpen','URLDownloadToFile','InternetOpen'];
+const CRYPTO_APIS      = ['CryptEncrypt','BCryptEncrypt','EVP_EncryptInit','AES_encrypt'];
+const SHELL_APIS       = ['ShellExecute','WScript.Shell','cmd.exe','powershell','base64_decode','FromBase64String'];
+const RANSOM_TERMS     = ['ransom','bitcoin','payment','your files have been encrypted','decrypt your files','pay'];
+const KEYLOG_APIS      = ['SetWindowsHookEx','GetAsyncKeyState','WH_KEYBOARD','keybd_event'];
+
+function countHits(text, terms) {
+    const lower = text.toLowerCase();
+    return terms.filter(t => lower.includes(t.toLowerCase())).length;
+}
+
+function extractTextFeatures(content, bytes, ext) {
+    return {
+        entropy:         shannonEntropy(bytes),
+        injectionHits:   countHits(content, INJECTION_APIS),
+        evasionHits:     countHits(content, EVASION_APIS),
+        persistenceHits: countHits(content, PERSISTENCE_APIS),
+        networkHits:     countHits(content, NETWORK_APIS),
+        cryptoHits:      countHits(content, CRYPTO_APIS),
+        shellHits:       countHits(content, SHELL_APIS),
+        ransomHits:      countHits(content, RANSOM_TERMS),
+        keylogHits:      countHits(content, KEYLOG_APIS),
+        obfuscation:     (content.match(/[A-Za-z0-9+/]{80,}={0,2}/g)||[]).length +
+                         (content.match(/\\x[0-9a-fA-F]{2}/g)||[]).length +
+                         (content.match(/eval\s*\(/gi)||[]).length,
+        ext
+    };
+}
+
+// ── SecureAIEngine ────────────────────────────────────────────────────────────
 
 class SecureAIEngine {
     constructor() {
-        this.model = null;
-        this.phi3Model = null;
+        this.classifier    = null;
         this.isInitialized = false;
-        this.securityConfig = {
-            encryptionKey: null,
-            apiEndpoint: null,
-            rateLimit: 100, // Requêtes par minute
-            requestCount: 0,
-            lastRequest: 0
-        };
+        this.rateLimit     = { count: 0, windowStart: 0, max: 100 };
     }
 
-    // Initialisation sécurisée des modèles
     async initialize() {
+        console.log('AI Engine: loading Transformers.js (Xenova/nli-deberta-v3-small)...');
         try {
-            console.log('🔐 Initialisation du moteur d\'IA sécurisé...');
-            
-            // Charger TensorFlow.js de manière sécurisée
-            await this.loadTensorFlowSecurely();
-            
-            // Charger le modèle Phi-3
-            await this.loadPhi3Model();
-            
-            // Initialiser les modèles de détection
-            await this.loadDetectionModels();
-            
+            this.classifier    = await getClassifier();
             this.isInitialized = true;
-            console.log('✅ Moteur d\'IA initialisé avec succès');
-            
-        } catch (error) {
-            console.error('❌ Erreur d\'initialisation IA:', error);
-            throw new Error('Échec de l\'initialisation du moteur d\'IA');
+            console.log('AI Engine: ready.');
+        } catch (err) {
+            console.warn('AI Engine: Transformers.js unavailable, heuristic-only mode.', err.message);
+            this.classifier    = null;
+            this.isInitialized = true;
         }
     }
 
-    // Chargement sécurisé de TensorFlow.js
-    async loadTensorFlowSecurely() {
-        // Vérifier l'intégrité de TensorFlow.js
-        if (typeof tf === 'undefined') {
-            throw new Error('TensorFlow.js non disponible');
+    checkRateLimit() {
+        const now = Date.now();
+        if (now - this.rateLimit.windowStart > 60000) {
+            this.rateLimit.count       = 0;
+            this.rateLimit.windowStart = now;
         }
-        
-        // Configuration de sécurité
-        tf.setBackend('cpu'); // Utiliser CPU pour la sécurité
-        tf.enableProdMode(); // Mode production pour les performances
-        
-        console.log('🔒 TensorFlow.js chargé en mode sécurisé');
+        return ++this.rateLimit.count <= this.rateLimit.max;
     }
 
-    // Chargement du modèle Phi-3
-    async loadPhi3Model() {
-        try {
-            // Simulation du chargement Phi-3 (remplacé par l'implémentation réelle)
-            this.phi3Model = {
-                name: 'Phi-3-Security',
-                version: '1.0.0',
-                capabilities: ['malware_detection', 'behavioral_analysis', 'threat_classification']
-            };
-            
-            console.log('🤖 Modèle Phi-3 chargé:', this.phi3Model.name);
-            
-        } catch (error) {
-            console.warn('⚠️ Modèle Phi-3 non disponible, utilisation du mode dégradé');
-            this.phi3Model = null;
-        }
+    validateFile(file) {
+        return file && file.size > 0 && file.size <= 100 * 1024 * 1024;
     }
 
-    // Chargement des modèles de détection
-    async loadDetectionModels() {
-        this.detectionModels = {
-            // Modèle de détection de malware
-            malware: {
-                name: 'MalwareDetector',
-                features: ['entropy', 'imports', 'sections', 'strings', 'behavior'],
-                threshold: 0.75
-            },
-            
-            // Modèle de détection de ransomware
-            ransomware: {
-                name: 'RansomwareDetector', 
-                features: ['encryption_patterns', 'file_operations', 'network_activity'],
-                threshold: 0.85
-            },
-            
-            // Modèle d'analyse comportementale
-            behavioral: {
-                name: 'BehavioralAnalyzer',
-                features: ['file_ops', 'registry_ops', 'network_ops', 'process_ops'],
-                threshold: 0.70
-            }
-        };
-        
-        console.log('🎯 Modèles de détection chargés');
-    }
-
-    // Analyse sécurisée d'un fichier
     async analyzeFile(file, options = {}) {
-        // Vérifications de sécurité
-        if (!this.isInitialized) {
-            throw new Error('Moteur d\'IA non initialisé');
+        if (!this.isInitialized) throw new Error('AI Engine not initialized');
+        if (!this.checkRateLimit())  throw new Error('Rate limit exceeded');
+        if (!this.validateFile(file)) throw new Error('Invalid file');
+
+        const { bytes, text } = await this._readFile(file);
+        const ext     = file.name.split('.').pop().toLowerCase();
+        const features = extractTextFeatures(text, bytes, ext);
+
+        const heuristicResult = this._heuristicScore(features);
+        let llmResult = null;
+        if (this.classifier && text.trim().length > 20) {
+            llmResult = await this._classifyWithLLM(text, file.name);
         }
 
-        // Rate limiting
-        if (!this.checkRateLimit()) {
-            throw new Error('Limite de requêtes dépassée');
-        }
-
-        // Validation du fichier
-        if (!this.validateFile(file)) {
-            throw new Error('Fichier invalide');
-        }
-
-        try {
-            console.log(`🔍 Analyse IA de: ${file.name}`);
-            
-            // Extraction des features
-            const features = await this.extractFeatures(file);
-            
-            // Analyse avec TensorFlow
-            const tfResults = await this.analyzeWithTensorFlow(features);
-            
-            // Analyse avec Phi-3 (si disponible)
-            const phi3Results = await this.analyzeWithPhi3(features, file);
-            
-            // Combinaison des résultats
-            const combinedResults = this.combineResults(tfResults, phi3Results);
-            
-            // Validation de sécurité
-            this.validateResults(combinedResults);
-            
-            return combinedResults;
-            
-        } catch (error) {
-            console.error('❌ Erreur d\'analyse IA:', error);
-            throw new Error(`Échec de l'analyse: ${error.message}`);
-        }
+        return this._combine(heuristicResult, llmResult, features);
     }
 
-    // Extraction sécurisée des features
-    async extractFeatures(file) {
-        const features = {
-            // Features de base
-            fileSize: file.size,
-            fileType: this.getFileType(file.name),
-            entropy: await this.calculateEntropy(file),
-            
-            // Features avancées
-            imports: await this.extractImports(file),
-            sections: await this.extractSections(file),
-            strings: await this.extractStrings(file),
-            
-            // Features comportementales
-            behavior: await this.analyzeBehavior(file),
-            
-            // Features de sécurité
-            security: await this.extractSecurityFeatures(file)
-        };
-        
-        return features;
-    }
+    // ── Private ──────────────────────────────────────────────────────────────
 
-    // Calcul de l'entropie Shannon
-    async calculateEntropy(file) {
-        return new Promise((resolve) => {
+    _readFile(file) {
+        return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
-                const data = new Uint8Array(e.target.result);
-                const byteCounts = new Array(256).fill(0);
-                
-                for (let byte of data) {
-                    byteCounts[byte]++;
-                }
-                
-                let entropy = 0;
-                const totalBytes = data.length;
-                
-                for (let count of byteCounts) {
-                    if (count > 0) {
-                        const probability = count / totalBytes;
-                        entropy -= probability * Math.log2(probability);
-                    }
-                }
-                
-                resolve(entropy);
+                const bytes = new Uint8Array(e.target.result);
+                const text  = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+                resolve({ bytes, text });
             };
+            reader.onerror = reject;
             reader.readAsArrayBuffer(file);
         });
     }
 
-    // Extraction des imports (pour les exécutables)
-    async extractImports(file) {
-        // Simulation - à remplacer par une vraie analyse PE
-        const ext = file.name.split('.').pop().toLowerCase();
-        if (['exe', 'dll'].includes(ext)) {
-            return ['kernel32.dll', 'user32.dll', 'advapi32.dll'];
-        }
-        return [];
+    _heuristicScore(f) {
+        let score    = 0;
+        const issues = [];
+
+        if (f.entropy > 7.2)      { score += 28; issues.push(`Entropy ${f.entropy.toFixed(2)} — likely packed/encrypted`); }
+        else if (f.entropy > 6.5) { score += 12; issues.push(`Entropy ${f.entropy.toFixed(2)} — elevated`); }
+
+        if (f.injectionHits > 0)   { score += f.injectionHits   * 9;  issues.push(`Process injection APIs (${f.injectionHits})`); }
+        if (f.evasionHits > 0)     { score += f.evasionHits     * 7;  issues.push(`Anti-debug/evasion APIs (${f.evasionHits})`); }
+        if (f.persistenceHits > 0) { score += f.persistenceHits * 6;  issues.push(`Persistence mechanisms (${f.persistenceHits})`); }
+        if (f.cryptoHits > 0)      { score += f.cryptoHits      * 5;  issues.push(`Crypto APIs (${f.cryptoHits})`); }
+        if (f.shellHits > 0)       { score += f.shellHits       * 7;  issues.push(`Shell/exec APIs (${f.shellHits})`); }
+        if (f.keylogHits > 0)      { score += f.keylogHits      * 10; issues.push(`Keylogger APIs (${f.keylogHits})`); }
+        if (f.ransomHits > 0)      { score += f.ransomHits      * 10; issues.push(`Ransom-related strings (${f.ransomHits})`); }
+        if (f.obfuscation > 5)     { score += 18; issues.push(`Obfuscation indicators (${f.obfuscation})`); }
+        else if (f.obfuscation > 0){ score += 6;  issues.push(`Possible obfuscation (${f.obfuscation})`); }
+
+        return { score: Math.min(100, score), issues, entropy: f.entropy };
     }
 
-    // Extraction des sections PE
-    async extractSections(file) {
-        const ext = file.name.split('.').pop().toLowerCase();
-        if (['exe', 'dll'].includes(ext)) {
-            return ['.text', '.data', '.rdata', '.reloc'];
-        }
-        return [];
-    }
-
-    // Extraction des chaînes de caractères
-    async extractStrings(file) {
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const content = e.target.result;
-                const strings = content.match(/[A-Za-z0-9]{4,}/g) || [];
-                resolve(strings.slice(0, 100)); // Limiter à 100 strings
-            };
-            reader.readAsText(file);
-        });
-    }
-
-    // Analyse comportementale
-    async analyzeBehavior(file) {
-        const behavior = {
-            fileOperations: Math.random() > 0.5,
-            registryOperations: Math.random() > 0.3,
-            networkConnections: Math.random() > 0.2,
-            processCreation: Math.random() > 0.1
-        };
-        
-        return behavior;
-    }
-
-    // Extraction des features de sécurité
-    async extractSecurityFeatures(file) {
-        return {
-            hasEncryption: Math.random() > 0.7,
-            hasObfuscation: Math.random() > 0.6,
-            hasAntiDebug: Math.random() > 0.4,
-            hasPacking: Math.random() > 0.5
-        };
-    }
-
-    // Analyse avec TensorFlow
-    async analyzeWithTensorFlow(features) {
-        // Conversion des features en tensor
-        const featureVector = this.featuresToVector(features);
-        const tensor = tf.tensor2d([featureVector]);
-        
-        // Prédiction (simulation pour l'instant)
-        const prediction = {
-            malware: Math.random(),
-            ransomware: Math.random(),
-            benign: Math.random()
-        };
-        
-        // Normalisation
-        const total = prediction.malware + prediction.ransomware + prediction.benign;
-        prediction.malware /= total;
-        prediction.ransomware /= total;
-        prediction.benign /= total;
-        
-        return {
-            model: 'TensorFlow-Security',
-            predictions: prediction,
-            confidence: Math.random() * 0.3 + 0.7 // 70-100%
-        };
-    }
-
-    // Analyse avec Phi-3
-    async analyzeWithPhi3(features, file) {
-        if (!this.phi3Model) {
+    async _classifyWithLLM(text, filename) {
+        try {
+            const sample = text.replace(/[^\x20-\x7E\n]/g, '').slice(0, 1500) || filename;
+            const result = await this.classifier(sample, THREAT_LABELS, { multi_label: false });
+            const map = {};
+            result.labels.forEach((l, i) => { map[l] = result.scores[i]; });
+            return map;
+        } catch (err) {
+            console.warn('LLM classification failed:', err.message);
             return null;
         }
-        
-        // Simulation de l'analyse Phi-3
-        const phi3Analysis = {
-            model: 'Phi-3-Security',
-            threatLevel: Math.random(),
-            threatType: this.getRandomThreatType(),
-            confidence: Math.random() * 0.2 + 0.8, // 80-100%
-            insights: this.generatePhi3Insights(features)
-        };
-        
-        return phi3Analysis;
     }
 
-    // Combinaison des résultats
-    combineResults(tfResults, phi3Results) {
-        let finalScore = tfResults.predictions.malware;
-        let confidence = tfResults.confidence;
-        
-        if (phi3Results) {
-            // Pondération: TensorFlow 60%, Phi-3 40%
-            finalScore = (tfResults.predictions.malware * 0.6) + (phi3Results.threatLevel * 0.4);
-            confidence = (tfResults.confidence * 0.6) + (phi3Results.confidence * 0.4);
+    _combine(heuristic, llm, features) {
+        let finalScore = heuristic.score;
+        const insights = [...(heuristic.issues || [])];
+        let llmThreat  = null;
+        let llmBenign  = null;
+
+        if (llm) {
+            const nonBenign = THREAT_LABELS.filter(l => l !== 'benign');
+            llmThreat  = nonBenign.reduce((best, l) => llm[l] > llm[best] ? l : best, nonBenign[0]);
+            llmBenign  = llm['benign'] || 0;
+            const llmScore = (1 - llmBenign) * 100;
+            finalScore = Math.round(finalScore * 0.55 + llmScore * 0.45);
+            insights.push(`LLM: ${llmThreat} (${(llm[llmThreat] * 100).toFixed(1)}% confidence)`);
+            insights.push(`LLM benign probability: ${(llmBenign * 100).toFixed(1)}%`);
         }
-        
+
         return {
-            score: finalScore,
-            confidence: confidence,
-            threatLevel: this.scoreToThreatLevel(finalScore),
-            recommendations: this.generateRecommendations(finalScore, tfResults, phi3Results),
-            details: {
-                tensorflow: tfResults,
-                phi3: phi3Results
-            }
+            score:           finalScore,
+            confidence:      llm ? Math.min(0.97, 0.60 + (heuristic.issues.length * 0.05)) : 0.75,
+            threatLevel:     this._toThreatLevel(finalScore),
+            entropy:         features.entropy,
+            insights,
+            recommendations: this._recommendations(finalScore, llmThreat),
+            details:         { heuristic, llm }
         };
     }
 
-    // Utilitaires
-    featuresToVector(features) {
-        return [
-            features.entropy / 8, // Normaliser l'entropie
-            features.fileSize / 1000000, // Taille en MB
-            features.imports.length / 10, // Nombre d'imports
-            features.strings.length / 100, // Nombre de strings
-            features.behavior.fileOperations ? 1 : 0,
-            features.behavior.registryOperations ? 1 : 0,
-            features.behavior.networkConnections ? 1 : 0,
-            features.security.hasEncryption ? 1 : 0,
-            features.security.hasObfuscation ? 1 : 0
-        ];
-    }
-
-    scoreToThreatLevel(score) {
-        if (score > 0.8) return 'CRITICAL';
-        if (score > 0.6) return 'HIGH';
-        if (score > 0.4) return 'MEDIUM';
-        if (score > 0.2) return 'LOW';
+    _toThreatLevel(score) {
+        if (score >= 80) return 'CRITICAL';
+        if (score >= 60) return 'HIGH';
+        if (score >= 35) return 'MEDIUM';
+        if (score >= 15) return 'LOW';
         return 'SAFE';
     }
 
-    getRandomThreatType() {
-        const types = ['MALWARE', 'RANSOMWARE', 'TROJAN', 'BACKDOOR', 'KEYLOGGER'];
-        return types[Math.floor(Math.random() * types.length)];
+    _recommendations(score, llmLabel) {
+        const recs = [];
+        if (score >= 80)      recs.push('CRITICAL: Quarantine immediately and isolate the system.');
+        else if (score >= 60) recs.push('HIGH: Do not execute. Submit for further analysis.');
+        else if (score >= 35) recs.push('MEDIUM: Treat with caution. Manual review recommended.');
+        else if (score >= 15) recs.push('LOW: Minor indicators present. Monitor if deployed.');
+        else                  recs.push('SAFE: No significant threat indicators detected.');
+        if (llmLabel && llmLabel !== 'benign')
+            recs.push(`LLM identified behaviour consistent with: ${llmLabel.toUpperCase()}`);
+        return recs;
     }
 
-    generatePhi3Insights(features) {
-        const insights = [];
-        
-        if (features.entropy > 7.5) {
-            insights.push('Entropie élevée - possible chiffrement ou obfuscation');
-        }
-        
-        if (features.behavior.networkConnections) {
-            insights.push('Activité réseau détectée');
-        }
-        
-        if (features.security.hasAntiDebug) {
-            insights.push('Techniques anti-débogage détectées');
-        }
-        
-        return insights;
-    }
-
-    generateRecommendations(score, tfResults, phi3Results) {
-        const recommendations = [];
-        
-        if (score > 0.8) {
-            recommendations.push('🚨 THREAT CRITICAL - Quarantaine immédiate recommandée');
-        } else if (score > 0.6) {
-            recommendations.push('⚠️ THREAT HIGH - Analyse approfondie requise');
-        } else if (score > 0.4) {
-            recommendations.push('🔍 THREAT MEDIUM - Surveillance recommandée');
-        }
-        
-        if (tfResults.predictions.ransomware > 0.7) {
-            recommendations.push('💀 RANSOMWARE DÉTECTÉ - Action immédiate requise');
-        }
-        
-        return recommendations;
-    }
-
-    // Sécurité
-    checkRateLimit() {
-        const now = Date.now();
-        if (now - this.securityConfig.lastRequest < 60000) { // 1 minute
-            this.securityConfig.requestCount++;
-            if (this.securityConfig.requestCount > this.securityConfig.rateLimit) {
-                return false;
-            }
-        } else {
-            this.securityConfig.requestCount = 1;
-            this.securityConfig.lastRequest = now;
-        }
-        return true;
-    }
-
-    validateFile(file) {
-        // Vérifications de sécurité
-        if (file.size > 100 * 1024 * 1024) { // 100MB max
-            return false;
-        }
-        
-        const allowedTypes = ['exe', 'dll', 'js', 'ps1', 'bat', 'txt', 'pdf', 'doc'];
-        const ext = file.name.split('.').pop().toLowerCase();
-        
-        return allowedTypes.includes(ext);
-    }
-
-    validateResults(results) {
-        if (results.score < 0 || results.score > 1) {
-            throw new Error('Score invalide détecté');
-        }
-        
-        if (results.confidence < 0 || results.confidence > 1) {
-            throw new Error('Confiance invalide détectée');
-        }
-    }
-
+    // Legacy-compatible helpers used by lynx.js
     getFileType(filename) {
         return filename.split('.').pop().toLowerCase();
     }
 }
 
-// Export pour utilisation
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { SecureAIEngine };
-} 
+}

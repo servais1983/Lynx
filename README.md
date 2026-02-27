@@ -1,383 +1,310 @@
-<img width="1024" height="1024" alt="image" src="lynx.png" />
+﻿<img width="1024" height="1024" alt="Lynx" src="lynx.png" />
 
-# 🦊 Lynx - ThreatHunter Pro
+# Lynx - ThreatHunter Pro
 
-**Outil de triage de fichiers avec IA et analyse avancée**
+**Browser-based file triage and threat analysis platform**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/servais1983/Lynx)
-[![Python](https://img.shields.io/badge/python-3.7+-green.svg)](https://www.python.org/)
-[![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-yellow.svg)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/servais1983/Lynx)
+[![JavaScript](https://img.shields.io/badge/JavaScript-ES2022+-yellow.svg)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
-## 📋 Table des Matières
+---
 
-- [🎯 Vue d'ensemble](#-vue-densemble)
-- [🚀 Fonctionnalités](#-fonctionnalités)
-- [🛠️ Installation](#️-installation)
-- [📖 Utilisation](#-utilisation)
-- [🔧 Configuration](#-configuration)
-- [📊 Architecture](#-architecture)
-- [🤝 Contribution](#-contribution)
-- [📄 Licence](#-licence)
-- [🙏 Remerciements](#-remerciements)
+## Table of Contents
 
-## 🎯 Vue d'ensemble
+- [Overview](#overview)
+- [Features](#features)
+- [Analysis Engines](#analysis-engines)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Architecture](#architecture)
+- [Security Model](#security-model)
+- [Contributing](#contributing)
+- [License](#license)
 
-Lynx est un outil de triage de fichiers ultra-moderne qui combine l'intelligence artificielle, l'analyse comportementale et les techniques de détection avancées pour identifier et analyser les menaces potentielles dans vos fichiers.
+---
 
-### ✨ Points forts
+## Overview
 
-- **Interface glassmorphique** avec animations 3D
-- **Analyse multi-moteurs** (VirusTotal, YARA, signatures, ML)
-- **Traitement ZIP intelligent** avec extraction automatique
-- **Automatisation du triage** pour les répertoires entiers
-- **IA TensorFlow & Phi-3** pour l'analyse comportementale
-- **Visualisations temps réel** avec graphiques interactifs
-- **Architecture DevSecOps** avec sécurité renforcée
+Lynx is a client-side file triage tool designed for security analysts and incident responders. It combines static heuristic analysis, YARA-compatible pattern matching, real SHA-256 hashing, VirusTotal API v3 lookups, and in-browser LLM zero-shot classification to produce a composite threat score for any submitted file — without uploading content to any backend.
 
-## 🚀 Fonctionnalités
+All analysis runs entirely in the browser. No file bytes leave the user's machine unless the user explicitly configures a VirusTotal API key for hash lookups.
 
-### 🔐 Sécurité Renforcée (Nouveau)
-- **Gestion sécurisée des clés API** : Chiffrement AES-256-GCM des clés API
-- **Interface de gestion des clés** : Ajout/modification des clés API via l'interface
-- **Validation avancée des fichiers** : Analyse par magic numbers et signatures
-- **Système de build moderne** : Optimisation et minification automatique
-- **Configuration unifiée** : Centralisation de toutes les configurations
+---
 
-### 🔍 Analyse Avancée
-- **VirusTotal Integration** : Analyse en temps réel avec l'API VirusTotal
-- **YARA Rules** : Règles de détection personnalisables et étendues
-- **Signature Database** : Base de signatures locale pour la détection
-- **Pattern Matching** : Recherche de patterns spécifiques et personnalisés
-- **Machine Learning** : Classification automatique avec TensorFlow.js et Phi-3
+## Features
 
-### 📦 Traitement ZIP Intelligent
-- **Extraction automatique** des archives ZIP
-- **Analyse récursive** du contenu extrait
-- **Détection de menaces** dans les fichiers compressés
-- **Copie sélective** des fichiers suspects
+### Threat Analysis
+- Multi-engine scoring with weighted composite risk score (0-100)
+- Real SHA-256 file hashing using the Web Crypto API
+- Shannon entropy calculation to detect packed or encrypted payloads
+- Static heuristic analysis: injection APIs, evasion techniques, persistence mechanisms, crypto APIs, shell execution patterns, keylogger calls, ransom-related strings, obfuscation indicators
+- YARA-compatible pattern engine scanning actual file content (10 rule categories)
+- VirusTotal API v3 hash lookup with per-engine detection breakdown
 
-### 🤖 Automatisation du Triage
-- **Sélection de répertoires** réels pour l'analyse
-- **Traitement en lot** de fichiers multiples
-- **Copie automatique** des fichiers correspondants
-- **Rapports détaillés** avec statistiques complètes
+### AI / LLM Integration
+- Zero-shot text classification using **Transformers.js** (`Xenova/nli-deberta-v3-small`)
+- Runs as an ONNX quantized model directly in the browser via WebAssembly — no server required
+- Classifies file content against: malware, ransomware, trojan, backdoor, keylogger, benign
+- LLM result (45% weight) blended with heuristic score (55% weight)
+- Graceful degradation: if the model cannot load, heuristic-only mode activates automatically
 
-### 📊 Visualisations Temps Réel
-- **Graphiques en barres** : Répartition des menaces
-- **Graphiques en camembert** : Pourcentages par type
-- **Timeline** : Évolution des risques dans le temps
-- **Changement interactif** de type de visualisation
+### File Handling
+- Drag-and-drop and file picker upload
+- ZIP archive extraction with recursive analysis of contained files
+- Batch processing with progress tracking
+- Automated triage: directory scanning, suspicious file copy-out
 
-### 🛡️ Sécurité DevSecOps
-- **Chiffrement AES-256-GCM** pour les données sensibles
-- **Rate limiting** pour prévenir les abus
-- **Audit trail** complet des actions
-- **Conformité GDPR/ISO27001** intégrée
-- **Architecture Zero-Trust** avec isolation des processus
+### Security
+- API keys encrypted at rest with AES-256-GCM (Web Crypto API)
+- Stable per-installation encryption key derived via PBKDF2 (210 000 iterations, SHA-256)
+- Rate limiting for VirusTotal requests (4 req/min, free tier compliant)
+- Security audit log stored in localStorage, capped at 1 000 entries
 
-### 🧠 Intelligence Artificielle
-- **TensorFlow.js** : Modèles de détection comportementale
-- **Phi-3** : Classification avancée des menaces
-- **Score de risque dynamique** basé sur l'IA
-- **Recommandations intelligentes** pour l'analyse
+### Reporting and Visualisation
+- Interactive charts: bar, pie, timeline (Chart.js)
+- Exportable analysis reports (PDF/JSON)
+- Real-time progress indicators
+- Detailed per-file breakdown with evidence list
 
-## 🛠️ Installation
+---
 
-### Prérequis
-- Python 3.7+
-- Navigateur web moderne (Chrome, Firefox, Safari, Edge)
-- Connexion Internet (pour VirusTotal API)
+## Analysis Engines
 
-### Installation rapide
+| Engine | Technology | Type |
+|---|---|---|
+| SHA-256 Hash | Web Crypto API | Real |
+| VirusTotal Lookup | VirusTotal API v3 | Real |
+| Shannon Entropy | In-browser computation | Real |
+| Static Heuristics | Custom rule engine | Real |
+| YARA Patterns | In-browser pattern scan | Real |
+| ML Zero-shot LLM | Transformers.js / nli-deberta-v3-small | Real |
+| Signature Database | Local pattern DB | Real |
 
-1. **Cloner le repository**
+---
+
+## Installation
+
+### Prerequisites
+
+- A modern browser (Chrome 112+, Firefox 115+, Edge 112+) with WebAssembly support
+- Python 3.7+ or Node.js 18+ to serve static files locally
+- A VirusTotal API key (free tier at https://www.virustotal.com/gui/join-us)
+
+### Quick Start
+
 ```bash
 git clone https://github.com/servais1983/Lynx.git
 cd Lynx
-```
-
-2. **Installer les dépendances**
-```bash
 npm install
-```
-
-3. **Lancer Lynx en mode développement**
-```bash
 npm run dev
 ```
 
-4. **Ou construire pour la production**
+Then open `http://localhost:5173` in your browser.
+
+### Production Build
+
 ```bash
 npm run build
 npm run preview
 ```
 
-5. **Ouvrir dans le navigateur**
-```
-http://localhost:3786
-```
-
-### Installation manuelle
-
-Si vous n'avez pas npm, vous pouvez utiliser Python directement :
+### Without Node.js
 
 ```bash
 cd Lynx
 python -m http.server 3786
 ```
 
-Puis ouvrez `http://localhost:3786` dans votre navigateur.
-
-## 📖 Utilisation
-
-### 🎯 Démarrage rapide
-
-1. **Ouvrez Lynx** dans votre navigateur
-2. **Glissez-déposez** vos fichiers dans la zone d'upload
-3. **Attendez l'analyse** automatique
-4. **Consultez les résultats** dans le panneau de droite
-5. **Cliquez sur un fichier** pour voir les détails complets
-
-### 🔍 Analyse de fichiers
-
-#### Glisser-déposer
-- Glissez vos fichiers directement dans la zone d'upload
-- Support de tous les types de fichiers (EXE, ZIP, DOC, PDF, etc.)
-- Analyse automatique avec tous les moteurs
-
-#### Sélection manuelle
-- Cliquez sur "📂 Sélectionner des fichiers"
-- Choisissez vos fichiers dans l'explorateur
-- L'analyse démarre automatiquement
-
-### 🤖 Automatisation du triage
-
-1. **Sélectionnez un répertoire source**
-   - Cliquez sur "📁 Sélectionner Répertoire"
-   - Choisissez le dossier à analyser
-
-2. **Configurez la destination**
-   - Spécifiez le répertoire de destination
-   - Les fichiers suspects y seront copiés
-
-3. **Lancez l'automatisation**
-   - Cliquez sur "🚀 Démarrer"
-   - Suivez la progression en temps réel
-
-4. **Consultez le rapport**
-   - Cliquez sur "📋 Rapport" pour les détails
-   - Analysez les statistiques complètes
-
-### 🔑 Gestion des clés API (Nouveau)
-
-#### Ajouter une clé API VirusTotal
-1. Cliquez sur le bouton "🔑 Gérer les Clés API" dans l'interface
-2. Entrez votre clé API VirusTotal dans le champ correspondant
-3. Cliquez sur "Sauvegarder"
-4. La clé sera chiffrée et stockée localement
-
-#### Vérifier les clés API
-- Consultez l'état de vos clés API dans le gestionnaire
-- Les clés sont chiffrées avec AES-256-GCM
-- Aucune clé n'est stockée en clair
-
-### 🎨 Gestion des patterns
-
-#### Ajouter un pattern personnalisé
-1. Entrez le **nom** du pattern
-2. Spécifiez la **valeur** à rechercher
-3. Choisissez le **niveau de sévérité**
-4. Cliquez sur "➕ Ajouter"
-
-#### Rechercher des patterns
-1. Entrez le pattern dans le champ de recherche
-2. Cliquez sur "🔍 Rechercher"
-3. Consultez les résultats dans la liste
-
-### 📊 Visualisations
-
-#### Changer le type de graphique
-- Cliquez sur "🔄 Changer Type" dans le panneau de visualisation
-- Trois types disponibles :
-  - **Barres** : Vue classique avec pourcentages
-  - **Camembert** : Vue circulaire avec étiquettes
-  - **Timeline** : Évolution chronologique des risques
-
-## 🔧 Configuration
-
-### Configuration VirusTotal
-
-**⚠️ IMPORTANT : Vous devez fournir votre propre clé API VirusTotal**
-
-Pour utiliser l'API VirusTotal, vous devez :
-
-1. **Obtenir une clé API gratuite** sur [VirusTotal](https://www.virustotal.com/gui/join-us)
-2. **Ajouter votre clé API** via l'interface Lynx :
-   - Cliquez sur le bouton "🔑 Gérer les Clés API" dans l'interface
-   - Entrez votre clé API VirusTotal
-   - La clé sera chiffrée et stockée localement
-
-**Note de sécurité** : Aucune clé API n'est incluse dans ce repository pour des raisons de sécurité. Chaque utilisateur doit fournir sa propre clé.
-
-### Configuration YARA
-
-Les règles YARA sont définies dans `js/yara-rules.js`. Vous pouvez ajouter vos propres règles :
-
-```javascript
-const customRules = [
-    {
-        name: "Mon_Règle_Personnalisée",
-        rule: "rule Mon_Règle_Personnalisée { strings: $a = \"pattern_suspect\" condition: $a }",
-        severity: "HIGH"
-    }
-];
-```
-
-### Configuration des patterns
-
-Les patterns personnalisés sont stockés localement et peuvent être ajoutés via l'interface utilisateur ou directement dans le code.
-
-## 📊 Architecture
-
-### Structure du projet
-
-```
-Lynx/
-├── index.html              # Interface principale
-├── css/
-│   └── styles.css         # Styles glassmorphiques
-├── js/
-│   ├── lynx.js           # Logique principale
-│   ├── config.js         # Configuration
-│   ├── yara-rules.js     # Règles YARA
-│   ├── virustotal-api.js # API VirusTotal
-│   ├── ml-models.js      # Modèles ML
-│   ├── signature-database.js # Base de signatures
-│   ├── ai-engine.js      # Moteur IA
-│   ├── zip-processor.js  # Traitement ZIP
-│   ├── triage-automation.js # Automatisation
-│   ├── pattern-searcher.js # Recherche de patterns
-│   ├── ui-manager.js     # Gestion UI
-│   ├── security-manager.js # Sécurité
-│   ├── compliance-manager.js # Conformité
-│   ├── devsecops-config.js # Config DevSecOps
-│   ├── advanced-ai.js    # IA avancée
-│   ├── report-generator.js # Générateur de rapports
-│   ├── rest-api.js       # API REST
-│   ├── plugin-system.js  # Système de plugins
-│   ├── local-database.js # Base de données locale
-│   ├── analysis-worker.js # Workers d'analyse
-│   ├── test-functionality.js # Tests
-│   └── real-yara-rules.js # Règles YARA réelles
-├── package.json           # Configuration npm
-├── README.md             # Documentation
-├── LICENSE               # Licence MIT
-└── INSTALL.md           # Guide d'installation
-```
-
-### Technologies utilisées
-
-- **Frontend** : HTML5, CSS3, JavaScript ES6+
-- **IA/ML** : TensorFlow.js, Phi-3
-- **Sécurité** : AES-256-GCM, Rate Limiting
-- **Visualisation** : Canvas API, Three.js
-- **Stockage** : IndexedDB, localStorage
-- **Performance** : Web Workers, Service Workers
-
-### Moteurs d'analyse
-
-1. **VirusTotal API** : Analyse en temps réel
-2. **YARA Rules** : Détection de patterns
-3. **Signature Database** : Signatures locales
-4. **Machine Learning** : Classification IA
-5. **Pattern Matching** : Recherche personnalisée
-6. **ZIP Processing** : Analyse d'archives
-
-## 🤝 Contribution
-
-Les contributions sont les bienvenues ! Voici comment contribuer :
-
-### 🐛 Signaler un bug
-1. Ouvrez une [issue](https://github.com/servais1983/Lynx/issues)
-2. Décrivez le problème avec des détails
-3. Incluez les étapes pour reproduire le bug
-
-### 💡 Proposer une amélioration
-1. Créez une [issue](https://github.com/servais1983/Lynx/issues) avec le label "enhancement"
-2. Décrivez votre proposition
-3. Expliquez les bénéfices
-
-### 🔧 Contribuer au code
-1. Fork le repository
-2. Créez une branche pour votre fonctionnalité
-3. Committez vos changements
-4. Poussez vers votre fork
-5. Créez une Pull Request
-
-### 📝 Améliorer la documentation
-- Corrigez des erreurs dans le README
-- Ajoutez des exemples d'utilisation
-- Améliorez la structure de la documentation
-
-## 📄 Licence
-
-Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
-
-```
-MIT License
-
-Copyright (c) 2025 Lynx Team
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-## 🙏 Remerciements
-
-### Inspiration
-Ce projet s'inspire du travail de **Xavier Mertens** et de son script de triage en Python, qui a été une source d'inspiration majeure pour le développement de Lynx.
-
-### Technologies
-- **Three.js** : Animations 3D
-- **TensorFlow.js** : Intelligence artificielle
-- **VirusTotal** : API d'analyse de sécurité
-- **YARA** : Règles de détection
-
-### Communauté
-Merci à toute la communauté open source qui a contribué aux technologies utilisées dans ce projet.
+Open `http://localhost:3786`.
 
 ---
 
-## 🚀 Démarrage rapide
+## Usage
 
-```bash
-# Cloner le repository
-git clone https://github.com/servais1983/Lynx.git
+### File Analysis
 
-# Aller dans le dossier
-cd Lynx
+1. Open Lynx in the browser.
+2. Drag and drop files onto the upload zone, or click "Select Files".
+3. Analysis starts automatically. Each file passes through all enabled engines.
+4. Click a result row to view the full evidence breakdown, SHA-256 hash, entropy, YARA matches, and LLM classification.
 
-# Lancer Lynx
-npm start
+### Configuring the VirusTotal API Key
 
-# Ouvrir dans le navigateur
-# http://localhost:3786
+1. Click "Manage API Keys" in the toolbar.
+2. Select "VirusTotal" from the service list.
+3. Enter your API key and click "Save". The key is encrypted with AES-256-GCM before being stored in localStorage.
+4. To verify: the key preview (first 8 characters) is displayed in the key manager.
+
+### ZIP Archive Analysis
+
+Lynx automatically detects ZIP archives and recursively analyses their contents. Each contained file is scored individually. Files classified as suspicious or threat are flagged for copy-out.
+
+### Directory Triage (Automation)
+
+1. Click "Select Directory" and choose a local folder.
+2. Set a destination path for suspicious file copy-out.
+3. Click "Start". Lynx processes all files in the directory and generates a summary report.
+
+### Adding Custom Pattern Rules
+
+Edit `js/yara-rules.js` to add a new rule to the `YARA_RULES` object:
+
+```javascript
+my_custom_rule: {
+    name: 'My Custom Rule',
+    patterns: ['pattern_one', 'pattern_two', 'pattern_three'],
+    description: 'Description of what this rule detects'
+}
 ```
 
-**Lynx est maintenant prêt à analyser vos fichiers ! 🦊✨**
+Severity is calculated automatically based on the ratio of matched to total patterns.
+
+---
+
+## Configuration
+
+### Risk Score Thresholds
+
+Defined in `js/config.js`:
+
+| Level | Score Range | Action |
+|---|---|---|
+| SAFE | 0 – 14 | No action required |
+| LOW | 15 – 34 | Monitor if deployed |
+| MEDIUM | 35 – 59 | Manual review recommended |
+| HIGH | 60 – 79 | Do not execute |
+| CRITICAL | 80 – 100 | Quarantine immediately |
+
+### LLM Model
+
+The default model is `Xenova/nli-deberta-v3-small` (~86 MB, downloaded from the Hugging Face CDN on first use and cached by the browser). To use a different model, change the model identifier in `js/ai-engine.js`:
+
+```javascript
+_pipelinePromise = pipeline(
+    'zero-shot-classification',
+    'Xenova/nli-deberta-v3-small', // replace with another Xenova-compatible model
+    { quantized: true }
+);
+```
+
+---
+
+## Architecture
+
+### Project Structure
+
+```
+Lynx/
+├── index.html                    # Application shell
+├── css/
+│   ├── styles.css               # Core styles
+│   ├── enhanced-styles.css      # Extended UI components
+│   └── themes.css               # Colour themes
+├── js/
+│   ├── lynx.js                  # Main orchestrator
+│   ├── config.js                # Centralised configuration
+│   ├── ai-engine.js             # Transformers.js LLM engine
+│   ├── ml-models.js             # Static heuristic models
+│   ├── yara-rules.js            # YARA-compatible pattern engine
+│   ├── real-yara-rules.js       # Extended rule signatures
+│   ├── virustotal-api.js        # VirusTotal API v3 client
+│   ├── secure-api-manager.js    # AES-256-GCM key management
+│   ├── signature-database.js    # Local signature DB
+│   ├── zip-processor.js         # Archive handling
+│   ├── triage-automation.js     # Directory triage
+│   ├── pattern-searcher.js      # Custom pattern search
+│   ├── ui-manager.js            # UI state management
+│   ├── report-generator.js      # Report export
+│   ├── security-manager.js      # Auth and audit trail
+│   ├── compliance-manager.js    # GDPR/ISO27001 checks
+│   ├── local-database.js        # IndexedDB persistence
+│   ├── analysis-worker.js       # Web Worker offloading
+│   ├── rest-api.js              # REST API interface
+│   └── plugin-system.js         # Plugin architecture
+├── sw.js                         # Service Worker (PWA cache)
+├── package.json
+└── vite.config.js
+```
+
+### Technology Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | HTML5, CSS3, JavaScript ES2022+ |
+| LLM Inference | Transformers.js v2 (Xenova), ONNX Runtime Web |
+| Hashing/Crypto | Web Crypto API (native browser) |
+| Visualisation | Chart.js, Three.js |
+| Archive handling | JSZip |
+| Build | Vite 5, Terser |
+| Storage | IndexedDB, localStorage |
+| PWA | Service Worker, vite-plugin-pwa |
+
+### Analysis Pipeline
+
+```
+File input
+    -> SHA-256 hash (Web Crypto)
+    -> VirusTotal API v3 lookup (if key configured)
+    -> YARA pattern scan (full file content)
+    -> Static heuristic scoring (entropy + API pattern matching)
+    -> Transformers.js LLM zero-shot classification
+    -> Composite risk score (weighted blend)
+    -> Result stored and rendered
+```
+
+---
+
+## Security Model
+
+### API Key Storage
+
+Keys are never stored in plain text. The storage flow is:
+
+1. A random 256-bit master key is generated on first run and persisted in localStorage as `lynx_master_key`. Every subsequent session reuses this key — API keys are therefore readable across sessions.
+2. Each API key is encrypted with AES-256-GCM using a key derived from the master key via PBKDF2 (SHA-256, 210 000 iterations, installation-unique salt).
+3. The IV is prepended to the ciphertext before Base64 encoding.
+
+**Note:** localStorage is accessible to any JavaScript running on the same origin. Users should not run Lynx as a shared hosted service without additional origin isolation.
+
+### Data Privacy
+
+- No file content is transmitted to any external server.
+- VirusTotal lookups send only the SHA-256 hash of the file.
+- The LLM runs entirely in-browser via WebAssembly.
+- Analysis results are stored only in the user's browser (IndexedDB / localStorage).
+
+---
+
+## Contributing
+
+Bug reports and pull requests are welcome at https://github.com/servais1983/Lynx/issues.
+
+### Development Setup
+
+```bash
+git clone https://github.com/servais1983/Lynx.git
+cd Lynx
+npm install
+npm run dev
+```
+
+### Code Standards
+
+- ES2022+ with `async/await` throughout
+- No `Math.random()` in analysis logic — all scoring must be deterministic
+- New analysis rules must scan actual file content, not filenames or MIME types
+- Each engine must fail gracefully and not break the analysis pipeline
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+## Acknowledgements
+
+Inspired by the file triage work of Xavier Mertens. YARA rule patterns adapted from the public YARA-Rules repository. LLM inference powered by the Xenova/Transformers.js project (Hugging Face).

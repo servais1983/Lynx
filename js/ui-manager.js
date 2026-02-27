@@ -262,14 +262,29 @@ class UIManager {
     showCustomNotification(title, message, options = {}) {
         const notification = document.createElement('div');
         notification.className = `custom-notification ${options.type || 'info'}`;
-        
-        notification.innerHTML = `
-            <div class="notification-header">
-                <span class="notification-title">${title}</span>
-                <button class="notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
-            </div>
-            <div class="notification-body">${message}</div>
-        `;
+
+        // Use DOM methods — NOT innerHTML — to prevent XSS from title/message
+        const header = document.createElement('div');
+        header.className = 'notification-header';
+
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'notification-title';
+        titleSpan.textContent = title;
+
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'notification-close';
+        closeBtn.textContent = '×';
+        closeBtn.addEventListener('click', () => notification.remove());
+
+        header.appendChild(titleSpan);
+        header.appendChild(closeBtn);
+
+        const body = document.createElement('div');
+        body.className = 'notification-body';
+        body.textContent = message;
+
+        notification.appendChild(header);
+        notification.appendChild(body);
 
         // Ajouter au conteneur de notifications
         let container = document.getElementById('notification-container');

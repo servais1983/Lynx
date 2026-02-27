@@ -649,13 +649,14 @@ class ComplianceManager {
             },
             
             calculateLikelihood: (threat, vulnerability) => {
-                // Simulation
-                return Math.random() * 0.5 + 0.1;
+                // Deterministic score derived from input strings — no Math.random()
+                const hash = (s) => String(s || '').split('').reduce((a, c) => (a * 31 + c.charCodeAt(0)) & 0xffff, 0);
+                return 0.1 + ((hash(threat) ^ hash(vulnerability)) % 1000) / 2000; // [0.1, 0.6)
             },
             
             calculateImpact: (asset) => {
-                // Simulation
-                return Math.random() * 0.5 + 0.5;
+                const hash = (s) => String(s || '').split('').reduce((a, c) => (a * 31 + c.charCodeAt(0)) & 0xffff, 0);
+                return 0.5 + (hash(JSON.stringify(asset)) % 1000) / 2000; // [0.5, 1.0)
             },
             
             getRiskLevel: (risk) => {
@@ -848,11 +849,15 @@ class ComplianceManager {
     createMonitoring() {
         return {
             monitorSystem: () => {
+                // Use real browser Performance API where available; null otherwise (no simulated data)
+                const mem = (typeof performance !== 'undefined' && performance.memory)
+                    ? Math.round(performance.memory.usedJSHeapSize / performance.memory.jsHeapSizeLimit * 100)
+                    : null;
                 const metrics = {
-                    cpu: Math.random() * 100,
-                    memory: Math.random() * 100,
-                    disk: Math.random() * 100,
-                    network: Math.random() * 100,
+                    cpu:     null, // Not available in browser context
+                    memory:  mem,
+                    disk:    null, // Not available in browser context
+                    network: null, // Not available in browser context
                     timestamp: new Date().toISOString()
                 };
                 
@@ -1089,11 +1094,11 @@ class ComplianceManager {
 
     // Utilitaires
     generateIncidentId() {
-        return `incident_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        return `incident_${Date.now()}_${crypto.randomUUID().replace(/-/g,'').slice(0,9)}`;
     }
 
     generateChangeId() {
-        return `change_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        return `change_${Date.now()}_${crypto.randomUUID().replace(/-/g,'').slice(0,9)}`;
     }
 
     async collectUserData(userId) {

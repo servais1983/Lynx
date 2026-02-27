@@ -40,33 +40,37 @@ class AIModels {
         }
     }
 
-    // Modèles de fallback (simulation)
+    // Modèles de fallback — scoring déterministe basé sur les features
     initializeFallbackModels() {
+        // Derive a deterministic score from the feature vector so the same
+        // file always produces the same result without Math.random().
+        const featureScore = (features) => {
+            if (!Array.isArray(features) || features.length === 0) return 0;
+            const sum = features.reduce((a, b) => a + Math.abs(b || 0), 0);
+            return Math.min(100, (sum / features.length) * 100);
+        };
         this.models = {
             malware: {
-                predict: (features) => ({
-                    prediction: Math.random() > 0.7 ? 'malicious' : 'benign',
-                    confidence: Math.random() * 0.3 + 0.7,
-                    score: Math.random() * 100
-                })
+                predict: (features) => {
+                    const score = featureScore(features);
+                    return { prediction: score > 60 ? 'malicious' : 'benign', confidence: Math.min(0.97, 0.50 + score / 200), score };
+                }
             },
             ransomware: {
-                predict: (features) => ({
-                    prediction: Math.random() > 0.8 ? 'ransomware' : 'benign',
-                    confidence: Math.random() * 0.2 + 0.8,
-                    score: Math.random() * 100
-                })
+                predict: (features) => {
+                    const score = featureScore(features);
+                    return { prediction: score > 70 ? 'ransomware' : 'benign', confidence: Math.min(0.97, 0.55 + score / 200), score };
+                }
             },
             behavioral: {
-                predict: (features) => ({
-                    prediction: Math.random() > 0.6 ? 'suspicious' : 'normal',
-                    confidence: Math.random() * 0.4 + 0.6,
-                    score: Math.random() * 100
-                })
+                predict: (features) => {
+                    const score = featureScore(features);
+                    return { prediction: score > 50 ? 'suspicious' : 'normal', confidence: Math.min(0.95, 0.45 + score / 200), score };
+                }
             }
         };
         this.isInitialized = true;
-        console.log('🔄 Mode dégradé activé - modèles simulés');
+        console.log('Fallback mode active — deterministic heuristic scoring');
     }
 
     // Analyse avec tous les modèles

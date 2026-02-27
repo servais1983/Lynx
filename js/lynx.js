@@ -4,6 +4,20 @@ let threats = 0;
 let scanning = false;
 let scene, camera, renderer, points;
 
+/**
+ * Escape HTML special characters to prevent XSS.
+ * Use this for every piece of user-supplied data inserted into innerHTML.
+ */
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
+}
+
 // Animation de fond 3D
 function initBackground() {
     scene = new THREE.Scene();
@@ -218,8 +232,8 @@ async function performAdvancedAnalysis(file) {
             console.warn('Erreur analyse patterns:', error);
         }
 
-        // 6. Analyse YARA étendue
-        const yaraResults = analyzeWithYARA(file);
+        // 6. YARA extended scan
+        const yaraResults = await analyzeWithYARA(file);
         if (yaraResults.length > 0) {
             const highSeverity = yaraResults.filter(r => r.severity === 'HIGH');
             if (highSeverity.length > 0) {
@@ -227,19 +241,19 @@ async function performAdvancedAnalysis(file) {
                 threats++;
                 riskScore = Math.max(riskScore, 80);
             } else {
-                status = Math.max(status, 'suspicious');
+                if (status !== 'threat') status = 'suspicious';
                 riskScore = Math.max(riskScore, 60);
             }
-            details.push(...yaraResults.map(r => `YARA: ${r.rule} (${r.severity})`));
+            details.push(...yaraResults.map(r => `YARA: ${r.rule} (${r.severity}) — ${r.matches.slice(0,3).join(', ')}`));
         }
 
-        // 7. Analyse ML
-        const mlResults = analyzeWithML(file);
+        // 7. ML static analysis
+        const mlResults = await analyzeWithML(file);
         const mlRiskScore = calculateGlobalRiskScore(mlResults);
         riskScore = Math.max(riskScore, mlRiskScore);
 
         if (mlResults.primary.prediction === 'malicious') {
-            status = Math.max(status, 'suspicious');
+            if (status !== 'threat') status = 'suspicious';
         }
 
         details.push(...getMLInsights(mlResults));
@@ -259,9 +273,10 @@ async function performAdvancedAnalysis(file) {
             details.push('Fichier de grande taille détecté');
         }
 
-        // 10. Génération du hash
-        const hash = generateMockHash(file.name + file.size);
-        details.push(`Hash SHA256: ${hash}`);
+        // 10. SHA-256 hash (real)
+        const hashBuffer = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+        const hash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2,'0')).join('');
+        details.push(`SHA-256: ${hash}`);
 
         // 11. Copier le fichier s'il est suspect
         if (status === 'threat' || status === 'suspicious') {
@@ -299,13 +314,15 @@ async function performAdvancedAnalysis(file) {
             type: file.type || 'unknown',
             status: 'error',
             riskScore: 0,
-            details: [`Erreur d'analyse: ${error.message}`],
+            details: [`Analysis error: ${error.message}`],
             timestamp: new Date().toLocaleTimeString(),
-            hash: generateMockHash(file.name + file.size)
+            hash: null
         };
     }
 }
 
+// Kept for backward compat with any remaining call-sites
+// (should no longer be called after the upgrade)
 function generateMockHash(input) {
     let hash = 0;
     for (let i = 0; i < input.length; i++) {
@@ -330,17 +347,25 @@ function updateFileList() {
         return;
     }
     
-    fileList.innerHTML = processedFiles.map(file => `
-        <div class="file-item ${file.status}" onclick="showDetails('${file.name}')">
+    fileList.innerHTML = processedFiles.map((file, index) => `
+        <div class="file-item ${escapeHtml(file.status)}" data-file-index="${index}" style="cursor:pointer">
             <div>
-                <strong>${file.name}</strong><br>
-                <small>${formatFileSize(file.size)} • ${file.timestamp}</small>
+                <strong>${escapeHtml(file.name)}</strong><br>
+                <small>${formatFileSize(file.size)} &bull; ${escapeHtml(file.timestamp)}</small>
             </div>
-            <div class="tooltip" data-tooltip="Score: ${file.riskScore}/100">
-                ${getStatusIcon(file.status)} ${file.riskScore}
+            <div class="tooltip" data-tooltip="Score: ${escapeHtml(String(file.riskScore))}/100">
+                ${getStatusIcon(file.status)} ${escapeHtml(String(file.riskScore))}
             </div>
         </div>
     `).join('');
+
+    // Use event delegation — never embed unescaped data in onclick attributes
+    fileList.querySelectorAll('[data-file-index]').forEach(el => {
+        el.addEventListener('click', () => {
+            const idx = parseInt(el.getAttribute('data-file-index'), 10);
+            if (!isNaN(idx) && processedFiles[idx]) showDetails(processedFiles[idx].name);
+        });
+    });
 }
 
 function updateStats() {
@@ -590,13 +615,22 @@ function updateCustomPatternsList() {
         return;
     }
 
-    container.innerHTML = patterns.map(pattern => `
+    container.innerHTML = patterns.map((pattern, index) => `
         <div class="pattern-item" style="margin: 5px 0; padding: 5px; background: rgba(255,255,255,0.1); border-radius: 3px;">
-            <strong>${pattern.displayName}</strong> (${pattern.severity})
+            <strong>${escapeHtml(pattern.displayName)}</strong> (${escapeHtml(pattern.severity)})
             <button class="btn btn-danger" style="float: right; font-size: 0.8rem; padding: 2px 5px;" 
-                    onclick="removeCustomPattern('${pattern.name}')">🗑️</button>
+                    data-pattern-index="${index}">🗑️</button>
         </div>
     `).join('');
+
+    // Safe event delegation for remove buttons
+    container.querySelectorAll('[data-pattern-index]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const idx = parseInt(btn.getAttribute('data-pattern-index'), 10);
+            const p = patterns[idx];
+            if (p) removeCustomPattern(p.name);
+        });
+    });
 }
 
 function removeCustomPattern(name) {
@@ -612,19 +646,22 @@ function searchPattern() {
         return;
     }
 
-    patternSearcher.addCustomPattern('temp_search', 'search', [pattern], 'MEDIUM', 'Recherche temporaire');
-
-    const results = processedFiles.map(file => {
-        return {
-            fileName: file.name,
-            pattern: pattern,
-            found: Math.random() > 0.7,
-            matches: Math.random() > 0.7 ? Math.floor(Math.random() * 5) + 1 : 0
-        };
-    }).filter(result => result.found);
+    // Search against already-analysed file data (names + details)
+    const lowerPattern = pattern.toLowerCase();
+    const results = processedFiles
+        .map(file => {
+            const searchableText = [file.name, ...(file.details || [])].join(' ').toLowerCase();
+            const allMatches = searchableText.split(lowerPattern).length - 1;
+            return {
+                fileName: file.name,
+                pattern:  pattern,
+                found:    allMatches > 0,
+                matches:  allMatches
+            };
+        })
+        .filter(result => result.found);
 
     displayPatternResults(results);
-    patternSearcher.removePattern('temp_search', 'search');
 }
 
 function displayPatternResults(results) {
@@ -637,9 +674,9 @@ function displayPatternResults(results) {
 
     container.innerHTML = results.map(result => `
         <div class="pattern-result" style="margin: 5px 0; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px;">
-            <strong>${result.fileName}</strong><br>
-            Pattern: <code>${result.pattern}</code><br>
-            Correspondances: ${result.matches}
+            <strong>${escapeHtml(result.fileName)}</strong><br>
+            Pattern: <code>${escapeHtml(result.pattern)}</code><br>
+            Correspondances: ${escapeHtml(String(result.matches))}
         </div>
     `).join('');
 }
@@ -750,88 +787,104 @@ function updateTriageStatistics() {
 function showTriageReport() {
     const stats = getTriageStatistics();
     const matchedFiles = triageAutomation.matchedFiles || [];
-    
+
+    const eSrc  = escapeHtml(String(stats.sourceDirectory  || ''));
+    const eDst  = escapeHtml(String(stats.destinationDirectory || ''));
+    const ePrc  = escapeHtml(String(stats.processedFiles   || 0));
+    const eMtch = escapeHtml(String(stats.matchedFiles     || 0));
+    const eErr  = escapeHtml(String(stats.errors           || 0));
+    const eStat = stats.isRunning ? 'En cours' : 'Terminé';
+
+    // Build matched-file rows without any unescaped user data
+    let matchedSection;
+    if (matchedFiles.length > 0) {
+        const rows = matchedFiles.map(file => {
+            const eName   = escapeHtml(String(file.name      || ''));
+            const eStatus = escapeHtml(String(file.status    || '').toUpperCase());
+            const eScore  = escapeHtml(String(file.riskScore || 0));
+            const rules   = (file.matches || []).map(m =>
+                `${escapeHtml(String(m.rule || ''))} (${escapeHtml(String(Math.round((m.confidence || 0.5) * 100)))}%)`
+            ).join(', ');
+            const ctx = (file.matches || []).map(m =>
+                escapeHtml(String(m.context || 'Analyse contextuelle'))
+            ).join(', ');
+            return `<div style="background:rgba(255,0,0,0.1);padding:10px;border-radius:5px;margin:5px 0;border-left:4px solid #f44336;">
+                        <p style="margin:0;color:#333;"><strong>${eName}</strong></p>
+                        <p style="margin:5px 0;color:#666;font-size:12px;">Statut: ${eStatus} | Score de risque: ${eScore}%</p>
+                        <p style="margin:5px 0;color:#666;font-size:12px;">Règles: ${rules}</p>
+                        <p style="margin:5px 0;color:#666;font-size:12px;">Contexte: ${ctx}</p>
+                    </div>`;
+        }).join('');
+        matchedSection = `
+            <div style="background:rgba(255,0,0,0.1);padding:20px;border-radius:10px;margin:15px 0;">
+                <h3 style="color:#333;margin-bottom:15px;">Fichiers Correspondants Détectés</h3>
+                <p style="color:#666;font-size:14px;">Ces fichiers ont été copiés vers <strong>${eDst}</strong> :</p>
+                ${rows}
+            </div>`;
+    } else {
+        matchedSection = `
+            <div style="background:rgba(0,255,0,0.1);padding:20px;border-radius:10px;margin:15px 0;border-left:4px solid #4CAF50;">
+                <h3 style="color:#333;margin-bottom:15px;">Aucune Menace Détectée</h3>
+                <p style="color:#333;">Aucun fichier suspect n'a été trouvé dans le répertoire analysé.</p>
+            </div>`;
+    }
+
     const modal = document.createElement('div');
     modal.className = 'modal';
     modal.style.display = 'flex';
-    
-    const reportContent = `
-        <div class="modal-content" style="max-width: 800px; max-height: 80vh; overflow-y: auto;">
-            <h2 style="color: #333; margin-bottom: 20px;">📋 Rapport d'Automatisation du Triage</h2>
-            
-            <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin: 15px 0;">
-                <h3 style="color: #333; margin-bottom: 15px;">📊 Statistiques Générales</h3>
-                <p><strong>📁 Répertoire source:</strong> ${stats.sourceDirectory}</p>
-                <p><strong>📁 Répertoire destination:</strong> ${stats.destinationDirectory}</p>
-                <p><strong>📊 Fichiers traités:</strong> ${stats.processedFiles}</p>
-                <p><strong>🎯 Correspondances trouvées:</strong> ${stats.matchedFiles}</p>
-                <p><strong>❌ Erreurs:</strong> ${stats.errors}</p>
-                <p><strong>🔄 Statut:</strong> ${stats.isRunning ? 'En cours' : 'Terminé'}</p>
+
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width:800px;max-height:80vh;overflow-y:auto;">
+            <h2 style="color:#333;margin-bottom:20px;">Rapport d'Automatisation du Triage</h2>
+
+            <div style="background:rgba(255,255,255,0.1);padding:20px;border-radius:10px;margin:15px 0;">
+                <h3 style="color:#333;margin-bottom:15px;">Statistiques Générales</h3>
+                <p><strong>Répertoire source :</strong> ${eSrc}</p>
+                <p><strong>Répertoire destination :</strong> ${eDst}</p>
+                <p><strong>Fichiers traités :</strong> ${ePrc}</p>
+                <p><strong>Correspondances trouvées :</strong> ${eMtch}</p>
+                <p><strong>Erreurs :</strong> ${eErr}</p>
+                <p><strong>Statut :</strong> ${eStat}</p>
             </div>
-            
-            <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin: 15px 0;">
-                <h3 style="color: #333; margin-bottom: 15px;">🔍 Fichiers Analysés</h3>
-                <p style="color: #666; font-size: 14px;">L'automatisation a analysé de <strong>vrais fichiers</strong> du répertoire "${stats.sourceDirectory}":</p>
-                <div style="color: #333; font-size: 14px; line-height: 1.6;">
-                    <p><strong>📊 Total:</strong> ${stats.processedFiles} fichiers analysés</p>
-                    <p><strong>🔍 Types détectés:</strong> TXT, JS, HTML, CSS, JSON, XML, PDF, DOC, EXE, DLL, BAT, PS1, etc.</p>
-                    <p><strong>📏 Tailles:</strong> De quelques KB à plusieurs MB</p>
-                    <p><strong>🔒 Sécurité:</strong> Contenu réel lu et analysé</p>
-                    <p><strong>📋 Copie:</strong> Fichiers suspects téléchargés automatiquement</p>
+
+            <div style="background:rgba(255,255,255,0.1);padding:20px;border-radius:10px;margin:15px 0;">
+                <h3 style="color:#333;margin-bottom:15px;">Fichiers Analysés</h3>
+                <p style="color:#666;font-size:14px;">L'automatisation a analysé de vrais fichiers du répertoire <strong>${eSrc}</strong> :</p>
+                <div style="color:#333;font-size:14px;line-height:1.6;">
+                    <p><strong>Total :</strong> ${ePrc} fichiers analysés</p>
+                    <p><strong>Types détectés :</strong> TXT, JS, HTML, CSS, JSON, XML, PDF, DOC, EXE, DLL, BAT, PS1, etc.</p>
+                    <p><strong>Sécurité :</strong> Contenu réel lu et analysé</p>
+                    <p><strong>Copie :</strong> Fichiers suspects téléchargés automatiquement</p>
                 </div>
             </div>
-            
-            ${matchedFiles.length > 0 ? `
-            <div style="background: rgba(255,0,0,0.1); padding: 20px; border-radius: 10px; margin: 15px 0;">
-                <h3 style="color: #333; margin-bottom: 15px;">🚨 Fichiers Correspondants Détectés</h3>
-                <p style="color: #666; font-size: 14px;">Ces fichiers ont été copiés vers "${stats.destinationDirectory}":</p>
-                ${matchedFiles.map(file => `
-                    <div style="background: rgba(255,0,0,0.1); padding: 10px; border-radius: 5px; margin: 5px 0; border-left: 4px solid #f44336;">
-                        <p style="margin: 0; color: #333;"><strong>${file.name}</strong></p>
-                        <p style="margin: 5px 0; color: #666; font-size: 12px;">Statut: ${file.status.toUpperCase()} | Score de risque: ${file.riskScore}%</p>
-                        <p style="margin: 5px 0; color: #666; font-size: 12px;">Règles déclenchées: ${file.matches.map(m => `${m.rule} (${Math.round((m.confidence || 0.5) * 100)}%)`).join(', ')}</p>
-                        <p style="margin: 5px 0; color: #666; font-size: 12px;">Contexte: ${file.matches.map(m => m.context || 'Analyse contextuelle').join(', ')}</p>
-                    </div>
-                `).join('')}
-            </div>
-            ` : `
-            <div style="background: rgba(0,255,0,0.1); padding: 20px; border-radius: 10px; margin: 15px 0; border-left: 4px solid #4CAF50;">
-                <h3 style="color: #333; margin-bottom: 15px;">✅ Aucune Menace Détectée</h3>
-                <p style="color: #333;">Aucun fichier suspect n'a été trouvé dans le répertoire analysé.</p>
-            </div>
-            `}
-            
-            <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin: 15px 0;">
-                <h3 style="color: #333; margin-bottom: 15px;">🔍 Patterns Analysés</h3>
-                <p style="color: #666; font-size: 14px;">L'automatisation recherche les patterns suivants:</p>
-                <ul style="color: #333; font-size: 14px; line-height: 1.6;">
-                    <li><strong>Patterns personnalisés:</strong> string1, string2, malicious, suspicious</li>
-                    <li><strong>Ransomware:</strong> WannaCry, Emotet, patterns de chiffrement</li>
-                    <li><strong>Trojans:</strong> Zeus, backdoors, communication réseau suspecte</li>
-                    <li><strong>Keyloggers:</strong> GetAsyncKeyState, surveillance clavier</li>
-                    <li><strong>Scripts malveillants:</strong> PowerShell, JavaScript, commandes suspectes</li>
-                    <li><strong>Macros:</strong> AutoOpen, macros automatiques</li>
-                    <li><strong>Exploits:</strong> Shellcode, buffer overflow</li>
+
+            ${matchedSection}
+
+            <div style="background:rgba(255,255,255,0.1);padding:20px;border-radius:10px;margin:15px 0;">
+                <h3 style="color:#333;margin-bottom:15px;">Patterns Analysés</h3>
+                <ul style="color:#333;font-size:14px;line-height:1.6;">
+                    <li><strong>Patterns personnalisés :</strong> string1, string2, malicious, suspicious</li>
+                    <li><strong>Ransomware :</strong> WannaCry, Emotet, patterns de chiffrement</li>
+                    <li><strong>Trojans :</strong> Zeus, backdoors, communication réseau suspecte</li>
+                    <li><strong>Keyloggers :</strong> GetAsyncKeyState, surveillance clavier</li>
+                    <li><strong>Scripts malveillants :</strong> PowerShell, JavaScript, commandes suspectes</li>
+                    <li><strong>Macros :</strong> AutoOpen, macros automatiques</li>
+                    <li><strong>Exploits :</strong> Shellcode, buffer overflow</li>
                 </ul>
             </div>
-            
-            <div style="text-align: center; margin-top: 20px;">
-                <button onclick="this.parentElement.parentElement.parentElement.remove()" 
-                        style="background: #2196F3; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
-                    ✅ Fermer le Rapport
+
+            <div style="text-align:center;margin-top:20px;">
+                <button id="closeTriageReportBtn"
+                        style="background:#2196F3;color:white;border:none;padding:10px 20px;border-radius:5px;cursor:pointer;">
+                    Fermer le Rapport
                 </button>
             </div>
-        </div>
-    `;
-    
-    modal.innerHTML = reportContent;
+        </div>`;
+
     document.body.appendChild(modal);
-    
-    modal.addEventListener('click', function(e) {
-        if (e.target === modal) {
-            modal.remove();
-        }
-    });
+
+    modal.querySelector('#closeTriageReportBtn').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 }
 
 function showTriageHelp() {
@@ -901,9 +954,9 @@ function showTriageHelp() {
             </div>
             
             <div style="text-align: center; margin-top: 20px;">
-                <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                <button id="closeTriageHelpBtn"
                         style="background: #2196F3; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
-                    ✅ Compris !
+                    Compris !
                 </button>
             </div>
         </div>
@@ -911,25 +964,24 @@ function showTriageHelp() {
     
     modal.innerHTML = helpContent;
     document.body.appendChild(modal);
-    
-    modal.addEventListener('click', function(e) {
-        if (e.target === modal) {
-            modal.remove();
-        }
-    });
+
+    const closeHelpBtn = modal.querySelector('#closeTriageHelpBtn');
+    if (closeHelpBtn) closeHelpBtn.addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 }
 
 function updateAIInsights() {
     const insights = document.getElementById('aiInsights');
     if (insights) {
-        const threatLevel = threats > 0 ? 'ÉLEVÉ' : processedFiles.filter(f => f.status === 'suspicious').length > 0 ? 'MODÉRÉ' : 'FAIBLE';
+        const suspiciousCount = processedFiles.filter(f => f.status === 'suspicious').length;
+        const threatLevel = threats > 0 ? 'HIGH' : suspiciousCount > 0 ? 'MEDIUM' : 'LOW';
         
         insights.innerHTML = `
-            <p>🎯 <strong>Niveau de menace détecté:</strong> ${threatLevel}</p>
-            <p>📊 <strong>Analyse terminée:</strong> ${processedFiles.length} fichiers traités</p>
-            <p>🔍 <strong>Recommandation:</strong> ${getRecommendation()}</p>
-            <p>⏱️ <strong>Temps de traitement:</strong> ${Math.random() * 3 + 1}s par fichier</p>
-            <p>🤖 <strong>IA Status:</strong> Modèles optimisés pour la détection</p>
+            <p><strong>Threat level detected:</strong> ${escapeHtml(threatLevel)}</p>
+            <p><strong>Analysis complete:</strong> ${escapeHtml(String(processedFiles.length))} file(s) processed</p>
+            <p><strong>Threats:</strong> ${escapeHtml(String(threats))} &mdash; Suspicious: ${escapeHtml(String(suspiciousCount))}</p>
+            <p><strong>Recommendation:</strong> ${escapeHtml(getRecommendation())}</p>
+            <p><strong>Engine:</strong> Transformers.js (nli-deberta-v3-small) + heuristic static analysis</p>
         `;
     }
 }
@@ -965,17 +1017,24 @@ function showDetails(fileName) {
     const detailModal = document.getElementById('detailModal');
     
     if (modalContent && detailModal) {
+        // Separate safe HTML details (e.g. VirusTotal links we build ourselves)
+        // from plain text entries that must be escaped
+        const detailItems = (file.details || []).map(detail => {
+            // Allow only pre-built anchor tags pointing to virustotal.com
+            const vtLinkPattern = /^<a href="https:\/\/www\.virustotal\.com\/[^"<>]+" target="_blank" rel="noopener">[^<>]+<\/a>$/;
+            if (vtLinkPattern.test(detail)) return `<li>${detail}</li>`;
+            return `<li>${escapeHtml(detail)}</li>`;
+        }).join('');
+
         modalContent.innerHTML = `
-            <h3>${file.name}</h3>
-            <p><strong>Taille:</strong> ${formatFileSize(file.size)}</p>
-            <p><strong>Type:</strong> ${file.type}</p>
-            <p><strong>Status:</strong> ${file.status.toUpperCase()}</p>
-            <p><strong>Score de risque:</strong> ${file.riskScore}/100</p>
-            <p><strong>Hash:</strong> ${file.hash}</p>
+            <h3>${escapeHtml(file.name)}</h3>
+            <p><strong>Taille:</strong> ${escapeHtml(formatFileSize(file.size))}</p>
+            <p><strong>Type:</strong> ${escapeHtml(file.type)}</p>
+            <p><strong>Status:</strong> ${escapeHtml(file.status.toUpperCase())}</p>
+            <p><strong>Score de risque:</strong> ${escapeHtml(String(file.riskScore))}/100</p>
+            <p><strong>Hash SHA-256:</strong> <code>${escapeHtml(file.hash || 'N/A')}</code></p>
             <h4>Détails de l'analyse:</h4>
-            <ul>
-                ${file.details.map(detail => `<li>${detail}</li>`).join('')}
-            </ul>
+            <ul>${detailItems}</ul>
         `;
         
         detailModal.style.display = 'flex';

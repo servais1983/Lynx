@@ -21,8 +21,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['three', '@tensorflow/tfjs'],
-          utils: ['crypto-js', 'jszip', 'file-saver'],
+          vendor: ['three', '@xenova/transformers'],
+          utils: ['jszip', 'file-saver'],
           charts: ['chart.js'],
         },
       },
